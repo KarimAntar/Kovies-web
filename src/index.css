@@ -88,3 +88,18 @@
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
+
+/* Custom subtitle overlay in the player */
+.kovies-subtitle {
+  display: inline-block;
+  max-width: min(90vw, 46rem);
+  padding: 0.2rem 0.7rem;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: clamp(1rem, 2.2vw, 1.45rem);
+  font-weight: 500;
+  line-height: 1.35;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  -webkit-font-smoothing: antialiased;
+}

@@ -95,3 +95,28 @@ test('playableSubtitles filters duplicates and unrenderable formats', () => {
   assert.equal(groups[0].language, 'en');
   assert.equal(groups[0].label, 'English');
 });
+
+import { parseVtt, activeCues } from '../src/lib/vtt';
+
+test('parseVtt extracts timed cues and activeCues filters by seconds', () => {
+  const vtt = [
+    'WEBVTT',
+    '',
+    '1',
+    '00:00:05.000 --> 00:00:08.500',
+    'because you\'re very good',
+    'at telling when I\'m lying',
+    '',
+    '2',
+    '00:00:10.000 --> 00:00:12.000',
+    '<b>That doesn\'t feel</b> zeroed in to me',
+  ].join('\n');
+  const cues = parseVtt(vtt);
+  assert.equal(cues.length, 2);
+  assert.equal(cues[0].start, 5);
+  assert.equal(cues[0].end, 8.5);
+  assert.equal(cues[0].text, "because you're very good\nat telling when I'm lying");
+  assert.equal(cues[1].text, "That doesn't feel zeroed in to me");
+  assert.equal(activeCues(cues, 6).length, 1);
+  assert.equal(activeCues(cues, 9).length, 0);
+});

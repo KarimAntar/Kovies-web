@@ -1,7 +1,7 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
-import handler from '../api/k/[...path].ts';
+import handler from '../api/gateway.ts';
 
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.KOVIES_API_KEY;
@@ -74,4 +74,23 @@ test('handles rewritten query.path and reconstructs extra search params', async 
   const res = response();
   await handler(req as never, res as never);
   assert.equal(res.code, 200);
+});
+
+test('handles /api/k/* rewrite form (path query string + original query)', async () => {
+  process.env.KOVIES_API_KEY = 'test-only';
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), 'https://kovies.kerix.tech/api/movies/550');
+    assert.equal(new Headers(options?.headers).get('x-api-key'), 'test-only');
+    return new Response('{"tmdbId":550}', { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const req = Object.assign(Readable.from([]), {
+    url: '/api/gateway?path=movies/550',
+    method: 'GET',
+    headers: {},
+    query: { path: 'movies/550' },
+  });
+  const res = response();
+  await handler(req as never, res as never);
+  assert.equal(res.code, 200);
+  assert.equal(String(res.body), '{"tmdbId":550}');
 });

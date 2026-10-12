@@ -56,7 +56,7 @@ function parseTarget(req: VercelRequest): { path: string; search: string } {
   }
 
   // If path is still empty and url had query string
-  if (!search && urlSearch) {
+  if (!path && !search && urlSearch) {
     search = urlSearch;
   }
 

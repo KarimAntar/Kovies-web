@@ -1,4 +1,17 @@
 {
-  "functions": { "api/k/[...path].ts": { "maxDuration": 90 } },
-  "rewrites": [ { "source": "/((?!api(?:/|$)).*)", "destination": "/index.html" } ]
+  "functions": {
+    "api/gateway.ts": {
+      "maxDuration": 90
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/k/(.*)",
+      "destination": "/api/gateway?path=$1"
+    },
+    {
+      "source": "/((?!api(?:/|$)).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

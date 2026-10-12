@@ -20,6 +20,7 @@ import type { MediaItem, MediaType, StreamingSource, SubtitleTrack } from '../..
 import { api, errorMessage, isAbortError } from '../../api/client';
 import { createVttBlobUrl, srtToVtt } from '../../lib/srtToVtt';
 import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../../lib/playback';
+import { parseVtt, activeCues, type VttCue } from '../../lib/vtt';
 import { groupSubtitles, playableSubtitles } from '../../lib/subtitles';
 import { desktop, isDesktop } from '../../platform';
 import { useWatchlist } from '../../context/WatchlistContext';
@@ -136,6 +137,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [subtitleBlobUrl, setSubtitleBlobUrl] = useState<string | null>(null);
   const [subtitleLoading, setSubtitleLoading] = useState(false);
   const [subtitleError, setSubtitleError] = useState<string | null>(null);
+  const [subtitleCues, setSubtitleCues] = useState<VttCue[]>([]);
   const subtitleAbortRef = useRef<AbortController | null>(null);
   const subtitleGroups = useMemo(() => groupSubtitles(subtitleTracks), [subtitleTracks]);
 
@@ -326,14 +328,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => URL.revokeObjectURL(subtitleBlobUrl);
   }, [subtitleBlobUrl]);
 
-  // Show only our track.
+  // Keep the blob track loaded (for persistence/inspection) but disable native
+  // rendering: cues are drawn by the custom overlay so they clear the controls.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const ours = trackElRef.current?.track ?? null;
     for (let i = 0; i < video.textTracks.length; i += 1) {
-      const t = video.textTracks[i];
-      t.mode = t === ours ? 'showing' : 'disabled';
+      video.textTracks[i].mode = 'disabled';
     }
   }, [subtitleBlobUrl]);
 
@@ -345,6 +346,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setActiveSubtitle(track);
     if (remember) writeSubtitlePref(track ? track.language : null);
     if (!track) {
+      setSubtitleCues([]);
       setSubtitleBlobUrl(null);
       setSubtitleLoading(false);
       return;
@@ -356,12 +358,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       .fetchSubtitleContent(track.url, controller.signal)
       .then((raw) => {
         if (controller.signal.aborted) return;
-        setSubtitleBlobUrl(createVttBlobUrl(srtToVtt(raw)));
+        const vtt = srtToVtt(raw);
+        setSubtitleCues(parseVtt(vtt));
+        setSubtitleBlobUrl(createVttBlobUrl(vtt));
       })
       .catch((err) => {
         if (controller.signal.aborted || isAbortError(err)) return;
         setSubtitleError('Could not load that subtitle. Try another one.');
         setActiveSubtitle(null);
+        setSubtitleCues([]);
         setSubtitleBlobUrl(null);
       })
       .finally(() => {
@@ -685,6 +690,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const shownTime = scrubTime ?? currentTime;
   const loading = !streamError && (sourcesLoading || isBuffering);
+  const showSubtitleOverlay = subtitleCues.length > 0 ? activeCues(subtitleCues, shownTime) : [];
+  // Native macOS traffic lights sit over the window's top-left corner.
+  const isMacDesktop = desktop?.platform === 'darwin';
 
   return (
     <div
@@ -793,6 +801,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Custom subtitle overlay: sits above the control bar, drops when it hides */}
+      {showSubtitleOverlay.length > 0 && !streamError && (
+        <div
+          aria-live="polite"
+          className="pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center gap-1 px-6 text-center"
+          style={{
+            bottom: showControls ? '6.5rem' : '1.75rem',
+            transition: 'bottom 300ms ease',
+          }}
+        >
+          {showSubtitleOverlay.map((cue, i) => (
+            <span key={`${cue.start}-${i}`} className="kovies-subtitle">
+              {cue.text.split('\n').map((line, j) => (
+                <span key={j} className="block">
+                  {line}
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div
         className={`absolute inset-0 flex flex-col justify-between pointer-events-none transition-opacity duration-300 z-20 ${
           showControls || streamError ? 'opacity-100' : 'opacity-0'
@@ -801,7 +831,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {/* Top bar */}
         <div
           className="p-3 sm:p-6 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex items-center justify-between gap-3 pointer-events-auto"
-          style={{ paddingTop: 'calc(var(--titlebar-h, 0px) + 0.75rem)' }}
+          style={{
+            paddingTop: 'calc(var(--titlebar-h, 0px) + 0.75rem)',
+            paddingLeft: isMacDesktop ? '5.5rem' : undefined,
+          }}
         >
           <div className="flex items-center gap-3 min-w-0">
             <button
