@@ -1,3 +1,4 @@
+import { desktop } from '../../platform';
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bookmark, Download, Film, Tv, Compass, Home, User, LogOut, X, Star } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -102,10 +103,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'search', label: 'Search', icon: <Search className="w-4 h-4 flex-shrink-0" /> },
   ];
 
+  const isMacDesktop = Boolean(desktop?.isDesktop && desktop?.platform === 'darwin');
   return (
     <header
       style={{ top: 'var(--titlebar-h, 0px)' }}
-      className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
+      className={`fixed left-0 right-0 z-40 transition-all duration-300 ${isMacDesktop ? 'pl-20 sm:pl-24' : ''} ${
         isScrolled
           ? 'bg-canvas/90 backdrop-blur-md border-b border-primary/10 shadow-lg shadow-black/40 py-2.5'
           : 'bg-gradient-to-b from-canvas/95 via-canvas/60 to-transparent py-4'

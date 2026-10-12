@@ -37,7 +37,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
   const rating = item.rating || item.vote_average;
 
   return (
-    <div className="relative w-full h-[60vh] sm:h-[65vh] min-h-[440px] max-h-[620px] overflow-hidden select-none">
+    <div className="relative w-full h-[52vh] sm:h-[56vh] md:h-[60vh] min-h-[380px] max-h-[520px] overflow-hidden select-none">
       {/* Background Image with Fallbacks */}
       <div className="absolute inset-0">
         <img
@@ -53,8 +53,8 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
       </div>
 
       {/* Hero Content Overlay */}
-      <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-8 sm:pb-12 md:pb-14 z-10">
-        <div className="max-w-2xl space-y-3 sm:space-y-3.5 animate-slide-up">
+      <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pt-20 pb-5 sm:pb-8 md:pb-10 z-10">
+        <div className="max-w-2xl space-y-2.5 sm:space-y-3 animate-slide-up">
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2.5 text-xs sm:text-sm font-medium">
             <span className="uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/25 border border-primary/40 text-primary-hover font-bold text-xs backdrop-blur-md">
@@ -91,13 +91,13 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
           </div>
 
           {/* Title */}
-          <h1 className="font-title text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
+          <h1 className="font-title text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
             {title}
           </h1>
 
           {/* Synopsis */}
           {item.overview && (
-            <p className="text-sm sm:text-base text-gray-300 line-clamp-3 leading-relaxed max-w-xl drop-shadow">
+            <p className="text-xs sm:text-sm md:text-base text-gray-300 line-clamp-2 sm:line-clamp-3 leading-relaxed max-w-xl drop-shadow">
               {item.overview}
             </p>
           )}

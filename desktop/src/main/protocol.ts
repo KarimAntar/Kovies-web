@@ -87,10 +87,6 @@ const MACOS_CSS_OVERRIDE = `
 <style id="kovies-macos-desktop-layout">
   /* Give macOS traffic light buttons (top-left) dedicated clearance and a
      grabbable strip of at least 38px tall (macOS traffic lights are ~37px). */
-  header, [class*="Navbar"], [class*="navbar"] {
-    padding-left: 5rem !important;
-    min-height: 38px;
-  }
   /* Hide custom Windows titlebar and its window control buttons on macOS */
   .desktop-titlebar, [class*="desktop-titlebar"] {
     display: none !important;

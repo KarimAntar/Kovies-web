@@ -348,7 +348,7 @@ function MainApp() {
             ) : null}
 
             {/* Rails Container */}
-            <div className="space-y-4 -mt-10 sm:-mt-16 md:-mt-20 relative z-20">
+            <div className="space-y-4 -mt-2 sm:-mt-4 relative z-20">
               {isAuthenticated && historyStatus === 'ready' && continueWatching.length === 0 && !homeError && (
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
                   <div className="rounded-2xl border border-surface-800 bg-surface-900/50 px-5 py-4 text-sm text-gray-400">

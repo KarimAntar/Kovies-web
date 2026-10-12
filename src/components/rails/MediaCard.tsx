@@ -139,7 +139,14 @@ export const MediaCard: React.FC<MediaCardProps> = ({
               <span>{Math.round(historyItem.progress * 100)}% watched</span>
               {historyItem.duration > 0 && (
                 <span>
-                  {Math.max(0, Math.round((historyItem.duration - historyItem.position) / 60))}m left
+                  {Math.max(
+                    0,
+                    Math.round(
+                      (historyItem.duration > 10000
+                        ? (historyItem.duration - historyItem.position) / 1000
+                        : historyItem.duration - historyItem.position) / 60
+                    )
+                  )}m left
                 </span>
               )}
             </div>
