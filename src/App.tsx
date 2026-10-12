@@ -26,7 +26,7 @@ const isAbort = (err: unknown) => isAbortError(err);
 function isAppRoute(): boolean {
   if (typeof window === 'undefined') return false;
   // If running inside the Electron desktop shell, always render the streaming app
-  if (Boolean(window.koviesDesktop?.isDesktop)) return true;
+  if (window.koviesDesktop?.isDesktop) return true;
   const p = window.location.pathname.toLowerCase().replace(/\/+$/, '');
   // /app or subroutes like /app/movies, /app/search render the streaming player app
   return p === '/app' || p.startsWith('/app/');
@@ -90,6 +90,7 @@ function MainApp() {
     watchlistStatus,
     watchlistError,
     refreshWatchlist,
+    removeFromHistory,
   } = useWatchlist();
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
@@ -220,6 +221,34 @@ function MainApp() {
     };
   }, [activeTab, searchQuery]);
 
+  const handleSearchSubmit = useCallback((q: string) => {
+    const trimmed = q.trim();
+    setSearchQuery(q);
+    setActiveTab('search');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!trimmed) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    setTabError(null);
+    api
+      .search(trimmed, 1)
+      .then((res) => {
+        setSearchResults(res.results || []);
+      })
+      .catch((err) => {
+        if (!isAbort(err)) {
+          setSearchResults([]);
+          setTabError(apiErrorMessage(err, 'Search failed.'));
+        }
+      })
+      .finally(() => {
+        setIsSearching(false);
+      });
+  }, []);
+
   // Handle Play Action
   const handlePlayMedia = (
     item: MediaItem,
@@ -313,6 +342,7 @@ function MainApp() {
         }}
         onSelectMedia={(item) => setSelectedMedia(item)}
         onOpenLanding={handleOpenLanding}
+        onSearchSubmit={handleSearchSubmit}
       />
 
       {/* Main Content Area */}
@@ -387,6 +417,14 @@ function MainApp() {
                   historyItems={continueWatching}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item, s, ep) => handlePlayMedia(item, s, ep)}
+                  onRemoveHistory={(_item, history) => {
+                    void removeFromHistory(
+                      history.mediaType,
+                      history.tmdbId,
+                      history.seasonNumber ?? undefined,
+                      history.episodeNumber ?? undefined
+                    );
+                  }}
                 />
               )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Plus, Check, Star, Info } from 'lucide-react';
+import { Play, Plus, Check, Star, Info, X } from 'lucide-react';
 import type { MediaItem, WatchHistoryItem } from '../../api/types';
 import { firstImage, FALLBACK_POSTER } from '../../lib/images';
 import { useWatchlist } from '../../context/WatchlistContext';
@@ -9,6 +9,7 @@ interface MediaCardProps {
   historyItem?: WatchHistoryItem;
   onSelect: (item: MediaItem) => void;
   onPlay: (item: MediaItem, season?: number, episode?: number) => void;
+  onRemoveHistory?: (item: MediaItem, history: WatchHistoryItem) => void;
 }
 
 export const MediaCard: React.FC<MediaCardProps> = ({
@@ -16,8 +17,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   historyItem,
   onSelect,
   onPlay,
+  onRemoveHistory,
 }) => {
-  const { inWatchlist, toggleWatchlist } = useWatchlist();
+  const { inWatchlist, toggleWatchlist, removeFromHistory } = useWatchlist();
   const tmdbId = item.tmdbId || item.id;
   const mediaType = item.type || item.media_type || 'movie';
   const isSaved = inWatchlist(tmdbId, mediaType);
@@ -51,6 +53,21 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     toggleWatchlist(item);
   };
 
+  const handleRemoveHistoryClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!historyItem) return;
+    if (onRemoveHistory) {
+      onRemoveHistory(item, historyItem);
+    } else {
+      void removeFromHistory(
+        mediaType,
+        tmdbId,
+        historyItem.seasonNumber ?? undefined,
+        historyItem.episodeNumber ?? undefined
+      );
+    }
+  };
+
   return (
     <div
       onClick={() => onSelect(item)}
@@ -78,8 +95,17 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           </span>
         </div>
 
-        {/* Rating in top right */}
-        {rating ? (
+        {/* Rating or Remove from History in top right */}
+        {historyItem ? (
+          <button
+            onClick={handleRemoveHistoryClick}
+            title="Remove from Continue Watching"
+            aria-label="Remove from Continue Watching"
+            className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full bg-black/75 hover:bg-red-500/80 text-gray-300 hover:text-white border border-white/15 backdrop-blur-md shadow-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 focus:opacity-100"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        ) : rating ? (
           <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-imdb text-[11px] font-bold border border-imdb/30 shadow-sm">
             <Star className="w-3 h-3 fill-imdb text-imdb" />
             <span>{rating.toFixed(1)}</span>

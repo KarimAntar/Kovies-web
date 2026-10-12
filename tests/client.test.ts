@@ -120,3 +120,34 @@ test('parseVtt extracts timed cues and activeCues filters by seconds', () => {
   assert.equal(activeCues(cues, 6).length, 1);
   assert.equal(activeCues(cues, 9).length, 0);
 });
+
+test('api client deleteHistory formats request URL with optional query parameters', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = '';
+  let requestedMethod = '';
+  globalThis.fetch = async (url, options) => {
+    requestedUrl = String(url);
+    requestedMethod = options?.method ?? 'GET';
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  try {
+    const { api } = await import('../src/api/client.ts');
+    // movie without season/episode
+    const resMovie = await api.deleteHistory('movie', 550);
+    assert.equal(resMovie.success, true);
+    assert.equal(requestedMethod, 'DELETE');
+    assert.equal(requestedUrl.endsWith('/user/history/movie/550'), true);
+
+    // tv with season & episode query params
+    const resTv = await api.deleteHistory('tv', 1234, 2, 5);
+    assert.equal(resTv.success, true);
+    assert.equal(requestedMethod, 'DELETE');
+    assert.equal(requestedUrl.includes('/user/history/tv/1234?seasonNumber=2&episodeNumber=5'), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

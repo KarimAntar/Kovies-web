@@ -11,6 +11,7 @@ interface MediaRailProps {
   historyItems?: WatchHistoryItem[];
   onSelect: (item: MediaItem) => void;
   onPlay: (item: MediaItem, season?: number, episode?: number) => void;
+  onRemoveHistory?: (item: MediaItem, history: WatchHistoryItem) => void;
 }
 
 export const MediaRail: React.FC<MediaRailProps> = ({
@@ -21,6 +22,7 @@ export const MediaRail: React.FC<MediaRailProps> = ({
   historyItems,
   onSelect,
   onPlay,
+  onRemoveHistory,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +87,7 @@ export const MediaRail: React.FC<MediaRailProps> = ({
                 historyItem={history}
                 onSelect={onSelect}
                 onPlay={onPlay}
+                onRemoveHistory={onRemoveHistory}
               />
             );
           })}

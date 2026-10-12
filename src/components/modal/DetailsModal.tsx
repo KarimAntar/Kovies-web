@@ -11,6 +11,7 @@ import {
   Layers,
   ChevronDown,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import type {
   MediaItem,
@@ -37,7 +38,7 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
   onPlay,
   onOpenTrailer,
 }) => {
-  const { inWatchlist, toggleWatchlist } = useWatchlist();
+  const { inWatchlist, toggleWatchlist, latestProgressFor, removeFromHistory } = useWatchlist();
   const [details, setDetails] = useState<MediaDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
@@ -181,6 +182,17 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
   const handlePlayEpisode = (episodeNum: number) => {
     onPlay(currentMedia, selectedSeason, episodeNum);
     onClose();
+  };
+
+  const currentHistory = tmdbId ? latestProgressFor(tmdbId, mediaType) : undefined;
+  const handleRemoveHistory = () => {
+    if (!tmdbId) return;
+    void removeFromHistory(
+      mediaType,
+      tmdbId,
+      currentHistory?.seasonNumber ?? undefined,
+      currentHistory?.episodeNumber ?? undefined
+    );
   };
 
   return (
@@ -334,6 +346,18 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                 {isSaved ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 <span>{isSaved ? 'In My List' : 'Add to List'}</span>
               </button>
+
+              {/* Remove from Continue Watching if in history */}
+              {currentHistory && (
+                <button
+                  onClick={handleRemoveHistory}
+                  title="Remove from Continue Watching"
+                  className="flex items-center gap-2 px-4 py-3 rounded-full font-medium text-sm sm:text-base border border-surface-700 bg-surface-800/80 hover:bg-red-500/20 hover:border-red-500/40 text-gray-300 hover:text-red-300 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Remove from Continue Watching</span>
+                </button>
+              )}
             </div>
 
             {/* Synopsis & Genres */}

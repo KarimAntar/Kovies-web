@@ -267,6 +267,17 @@ export const api = {
     return request('user/history/continue-watching', { signal });
   },
 
+  deleteHistory(
+    mediaType: MediaType,
+    tmdbId: number,
+    seasonNumber?: number,
+    episodeNumber?: number
+  ): Promise<{ success: boolean }> {
+    return request(`user/history/${mediaType}/${id(tmdbId)}${qs({ seasonNumber, episodeNumber })}`, {
+      method: 'DELETE',
+    });
+  },
+
   /** position/duration in milliseconds. Use keepalive for unload-time reports. */
   recordProgress(
     payload: RecordProgressPayload,

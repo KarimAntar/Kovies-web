@@ -14,6 +14,7 @@ interface NavbarProps {
   onTabChange: (tab: NavTab) => void;
   onSelectMedia: (item: MediaItem) => void;
   onOpenLanding?: () => void;
+  onSearchSubmit?: (query: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -21,6 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTabChange,
   onSelectMedia,
   onOpenLanding,
+  onSearchSubmit,
 }) => {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -168,7 +170,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     setIsSearchOpen(false);
-                    onTabChange('search');
+                    if (onSearchSubmit) {
+                      onSearchSubmit(searchQuery);
+                    } else {
+                      onTabChange('search');
+                    }
                   }
                 }}
                 placeholder="Search movies, shows..."

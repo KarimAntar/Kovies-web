@@ -23,6 +23,12 @@ interface WatchlistContextType {
   toggleWatchlist: (item: MediaItem) => Promise<void>;
   /** position/duration in milliseconds. */
   recordProgress: (payload: RecordProgressPayload, options?: { keepalive?: boolean }) => Promise<void>;
+  removeFromHistory: (
+    mediaType: MediaType,
+    tmdbId: number,
+    seasonNumber?: number,
+    episodeNumber?: number
+  ) => Promise<void>;
   findProgress: (tmdbId: number, mediaType: MediaType, season?: number, episode?: number) => WatchHistoryItem | undefined;
   latestProgressFor: (tmdbId: number, mediaType: MediaType) => WatchHistoryItem | undefined;
   refreshWatchlist: () => Promise<void>;
@@ -181,6 +187,38 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     []
   );
 
+  const removeFromHistory = useCallback(
+    async (
+      mediaType: MediaType,
+      tmdbId: number,
+      seasonNumber?: number,
+      episodeNumber?: number
+    ) => {
+      const prevList = continueWatching;
+      setContinueWatching((prev) =>
+        prev.filter(
+          (p) =>
+            !(
+              p.tmdbId === tmdbId &&
+              p.mediaType === mediaType &&
+              (seasonNumber === undefined || (p.seasonNumber ?? null) === (seasonNumber ?? null)) &&
+              (episodeNumber === undefined || (p.episodeNumber ?? null) === (episodeNumber ?? null))
+            )
+        )
+      );
+
+      if (sessionRef.current) {
+        try {
+          await api.deleteHistory(mediaType, tmdbId, seasonNumber, episodeNumber);
+        } catch (err) {
+          setContinueWatching(prevList);
+          setHistoryError(errorMessage(err, 'Could not remove item from history'));
+        }
+      }
+    },
+    [continueWatching]
+  );
+
   const findProgress = useCallback(
     (tmdbId: number, mediaType: MediaType, season?: number, episode?: number) =>
       continueWatching.find(
@@ -208,6 +246,7 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       inWatchlist,
       toggleWatchlist,
       recordProgress,
+      removeFromHistory,
       findProgress,
       latestProgressFor,
       refreshWatchlist,
@@ -223,6 +262,7 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       inWatchlist,
       toggleWatchlist,
       recordProgress,
+      removeFromHistory,
       findProgress,
       latestProgressFor,
       refreshWatchlist,
