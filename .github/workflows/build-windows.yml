@@ -1,0 +1,99 @@
+name: Build desktop applications
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows (x64)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - name: Install web dependencies
+        run: npm ci
+      - name: Build web application
+        run: npm run build
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+      - name: Test desktop boundaries
+        working-directory: desktop
+        run: npm test
+      - name: Build main and sandboxed preload
+        working-directory: desktop
+        env:
+          KOVIES_API_KEY: ${{ secrets.KOVIES_API_KEY }}
+        run: npm run build:main
+      - name: Package Windows installer and portable executable
+        working-directory: desktop
+        run: npx --no-install electron-builder --win --x64 --publish never
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kovies-Windows-x64
+          path: |
+            desktop/release/*.exe
+            desktop/release/*.exe.blockmap
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: macOS (Universal / arm64 / x64)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - name: Install web dependencies
+        run: npm ci
+      - name: Build web application
+        run: npm run build
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+      - name: Generate macOS application icons
+        working-directory: desktop
+        run: npm run icon
+      - name: Test desktop boundaries
+        working-directory: desktop
+        run: npm test
+      - name: Build main and sandboxed preload
+        working-directory: desktop
+        env:
+          KOVIES_API_KEY: ${{ secrets.KOVIES_API_KEY }}
+        run: npm run build:main
+      - name: Package macOS DMG
+        working-directory: desktop
+        run: npx --no-install electron-builder --mac dmg --publish never
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kovies-macOS
+          path: |
+            desktop/release/*.dmg
+            desktop/release/*.dmg.blockmap
+          if-no-files-found: error
+          retention-days: 14

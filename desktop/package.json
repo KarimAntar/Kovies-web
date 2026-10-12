@@ -1,0 +1,119 @@
+{
+  "name": "kovies-desktop",
+  "productName": "Kovies",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kovies desktop shell (Electron) for the Kovies web app",
+  "author": "Kovies",
+  "main": "build/main.js",
+  "scripts": {
+    "build:web": "npm --prefix .. run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build:main && node scripts/test.mjs",
+    "build:main": "npm run typecheck && node scripts/build.mjs",
+    "start": "npm run build:main && electron .",
+    "dev": "npm run build:web && npm run start",
+    "icon": "node scripts/make-icon.mjs",
+    "dist:win": "npm run build:web && npm run test && electron-builder --win --x64 --publish never",
+    "dist:win:dir": "npm run build:web && npm run test && electron-builder --win dir --x64 --publish never",
+    "dist:mac": "npm run build:web && npm run test && electron-builder --mac dmg --publish never"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "png-to-ico": "^3.0.2",
+    "typescript": "^6.0.2"
+  },
+  "build": {
+    "appId": "app.kovies.desktop",
+    "productName": "Kovies",
+    "copyright": "Copyright (c) Kovies",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "build/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist",
+        "to": "web",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "artifactName": "Kovies-${version}-${arch}.${ext}",
+    "mac": {
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.entertainment",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "artifactName": "Kovies-${version}-${arch}.${ext}",
+      "background": null,
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kovies",
+      "artifactName": "Kovies-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Kovies-${version}-${arch}-portable.${ext}"
+    }
+  },
+  "allowScripts": {
+    "electron-winstaller": false
+  }
+}
