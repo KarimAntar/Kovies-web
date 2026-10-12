@@ -113,7 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           : 'bg-gradient-to-b from-canvas/95 via-canvas/60 to-transparent py-4'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+      <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 flex items-center justify-between gap-4">
         {/* Left: Brand Logo & Navigation */}
         <div className="flex items-center gap-6 lg:gap-8">
           <button

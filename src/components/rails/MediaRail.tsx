@@ -38,9 +38,9 @@ export const MediaRail: React.FC<MediaRailProps> = ({
   }
 
   return (
-    <section className="relative group/rail py-3 sm:py-4">
+    <section className="relative group/rail py-1.5 sm:py-2.5">
       {/* Rail Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-2.5 sm:mb-3 flex items-end justify-between">
+      <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 mb-2 flex items-center justify-start gap-3">
         <div className="flex items-center gap-3">
           {icon && (
             <div className="flex items-center justify-center p-2 rounded-xl bg-surface-800/80 border border-surface-700/60 shadow-inner shrink-0">
@@ -72,7 +72,7 @@ export const MediaRail: React.FC<MediaRailProps> = ({
         {/* Scrollable Container */}
         <div
           ref={scrollContainerRef}
-          className="flex items-start gap-4 sm:gap-5 overflow-x-auto no-scrollbar px-4 sm:px-6 lg:px-8 py-2 scroll-smooth"
+          className="flex items-start gap-4 sm:gap-5 overflow-x-auto no-scrollbar px-4 sm:px-8 md:px-12 lg:px-16 py-2 scroll-smooth"
         >
           {items.map((item, idx) => {
             const history = historyItems?.find(

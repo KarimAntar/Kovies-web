@@ -37,7 +37,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
   const rating = item.rating || item.vote_average;
 
   return (
-    <div className="relative w-full h-[52vh] sm:h-[56vh] md:h-[60vh] min-h-[380px] max-h-[520px] overflow-hidden select-none">
+    <div className="relative w-full h-[42vh] sm:h-[46vh] md:h-[48vh] min-h-[300px] max-h-[420px] overflow-hidden select-none">
       {/* Background Image with Fallbacks */}
       <div className="absolute inset-0">
         <img
@@ -53,7 +53,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
       </div>
 
       {/* Hero Content Overlay */}
-      <div className="relative max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-end pt-20 pb-5 sm:pb-8 md:pb-10 z-10">
+      <div className="relative w-full h-full px-4 sm:px-8 md:px-12 lg:px-16 flex flex-col justify-end pt-16 pb-3 sm:pb-4 z-10">
         <div className="max-w-2xl space-y-2.5 sm:space-y-3 animate-slide-up">
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2.5 text-xs sm:text-sm font-medium">

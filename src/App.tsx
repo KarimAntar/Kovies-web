@@ -348,9 +348,9 @@ function MainApp() {
             ) : null}
 
             {/* Rails Container */}
-            <div className="space-y-4 -mt-2 sm:-mt-4 relative z-20">
+            <div className="space-y-2 mt-0 relative z-20">
               {isAuthenticated && historyStatus === 'ready' && continueWatching.length === 0 && !homeError && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+                <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-4">
                   <div className="rounded-2xl border border-surface-800 bg-surface-900/50 px-5 py-4 text-sm text-gray-400">
                     <span className="font-semibold text-gray-200">Continue Watching is empty.</span>{' '}
                     Start any title and your position will sync across devices.
@@ -419,7 +419,7 @@ function MainApp() {
 
         {/* Movies Tab */}
         {activeTab === 'movies' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28">
+          <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-24 sm:pt-28">
             <div className="flex items-center gap-3 mb-6">
               <Film className="w-7 h-7 text-primary" />
               <div>
@@ -458,7 +458,7 @@ function MainApp() {
 
         {/* Shows Tab */}
         {activeTab === 'shows' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28">
+          <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-24 sm:pt-28">
             <div className="flex items-center gap-3 mb-6">
               <Tv className="w-7 h-7 text-primary" />
               <div>
@@ -497,7 +497,7 @@ function MainApp() {
 
         {/* My List (Watchlist) Tab */}
         {activeTab === 'watchlist' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28">
+          <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-24 sm:pt-28">
             <div className="flex items-center gap-3 mb-6">
               <Bookmark className="w-7 h-7 text-primary" />
               <div>
@@ -564,7 +564,7 @@ function MainApp() {
 
         {/* Discover Tab */}
         {activeTab === 'discover' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28">
+          <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-24 sm:pt-28">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <Compass className="w-7 h-7 text-primary" />
@@ -624,7 +624,7 @@ function MainApp() {
 
         {/* Search Tab */}
         {activeTab === 'search' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28">
+          <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-24 sm:pt-28">
             <div className="flex items-center gap-3 mb-6">
               <Search className="w-7 h-7 text-primary" />
               <div>

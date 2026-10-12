@@ -57,7 +57,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       className="group relative flex-shrink-0 w-44 sm:w-52 md:w-56 cursor-pointer select-none transition-all duration-300"
     >
       {/* Poster Container */}
-      <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-card border border-surface-700/60 shadow-lg group-hover:shadow-primary/20 group-hover:border-primary/50 group-hover:bg-card-hover transition-all duration-300 transform group-hover:-translate-y-1.5">
+      <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-surface-850/90 border border-surface-700/60 shadow-xl group-hover:shadow-2xl group-hover:shadow-primary/25 group-hover:border-primary/60 transition-all duration-300 transform group-hover:-translate-y-2 ring-0 group-hover:ring-1 group-hover:ring-primary/40">
         <img
           src={posterUrl}
           alt={title}
@@ -73,14 +73,14 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
         {/* Badge in top left (Quality or Type) */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-canvas/80 backdrop-blur-md text-gray-300 border border-white/10">
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-gray-200 border border-white/15 shadow-sm">
             {mediaType === 'movie' ? 'Movie' : 'Series'}
           </span>
         </div>
 
         {/* Rating in top right */}
         {rating ? (
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-canvas/80 backdrop-blur-md text-imdb text-[11px] font-bold border border-imdb/20">
+          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-imdb text-[11px] font-bold border border-imdb/30 shadow-sm">
             <Star className="w-3 h-3 fill-imdb text-imdb" />
             <span>{rating.toFixed(1)}</span>
           </div>
