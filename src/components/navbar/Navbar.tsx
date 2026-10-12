@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bookmark, Film, Tv, Compass, Home, User, LogOut, X, Star } from 'lucide-react';
+import { Search, Bookmark, Download, Film, Tv, Compass, Home, User, LogOut, X, Star } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import { api } from '../../api/client';
@@ -12,12 +12,14 @@ interface NavbarProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
   onSelectMedia: (item: MediaItem) => void;
+  onOpenLanding?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onTabChange,
   onSelectMedia,
+  onOpenLanding,
 }) => {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -245,6 +247,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
           </div>
+
+          {/* Get Apps Landing Trigger */}
+          {onOpenLanding && (
+            <button
+              onClick={onOpenLanding}
+              title="Download Native Apps & Features"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-surface-800/80 hover:bg-surface-700 text-gray-300 hover:text-white border border-surface-700/80 text-xs font-semibold transition-all hover:scale-102"
+            >
+              <Download className="w-3.5 h-3.5 text-primary" />
+              <span>Get Apps</span>
+            </button>
+          )}
 
           {/* Account / Auth trigger */}
           <div ref={userMenuRef} className="relative">

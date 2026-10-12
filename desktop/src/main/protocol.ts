@@ -85,9 +85,11 @@ function respond(status: number, body: string, isHead = false): Response {
 
 const MACOS_CSS_OVERRIDE = `
 <style id="kovies-macos-desktop-layout">
-  /* Give macOS traffic light buttons (top-left) dedicated clearance */
+  /* Give macOS traffic light buttons (top-left) dedicated clearance and a
+     grabbable strip of at least 38px tall (macOS traffic lights are ~37px). */
   header, [class*="Navbar"], [class*="navbar"] {
     padding-left: 5rem !important;
+    min-height: 38px;
   }
   /* Hide custom Windows titlebar and its window control buttons on macOS */
   .desktop-titlebar, [class*="desktop-titlebar"] {
@@ -96,8 +98,95 @@ const MACOS_CSS_OVERRIDE = `
   :root {
     --titlebar-h: 0px !important;
   }
+
+  /*
+   * Window dragging on macOS. With titleBarStyle:'hidden' the window has no
+   * native title bar, so the page must declare its own drag regions.
+   *
+   * Both top bars opt into the --titlebar-h CSS variable (the navbar header
+   * and the player's control bar), so matching on that inline style picks up
+   * the real app chrome at the top of the window instead of guessing at
+   * framework-generated class names.
+   */
+  header,
+  [style*="titlebar-h"] {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  /*
+   * Interactive elements inside a drag region must opt out, otherwise they
+   * stop receiving clicks (the drag region swallows the pointer events).
+   */
+  header a,
+  header button,
+  header input,
+  header nav,
+  header form,
+  header label,
+  header [role="button"],
+  header [role="slider"],
+  header [tabindex],
+  [style*="titlebar-h"] a,
+  [style*="titlebar-h"] button,
+  [style*="titlebar-h"] input,
+  [style*="titlebar-h"] nav,
+  [style*="titlebar-h"] form,
+  [style*="titlebar-h"] label,
+  [style*="titlebar-h"] [role="button"],
+  [style*="titlebar-h"] [role="slider"],
+  [style*="titlebar-h"] [tabindex],
+  .desktop-no-drag,
+  .desktop-no-drag * {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+
+  /*
+   * Dedicated grab strip along the very top edge of the window.
+   *
+   * The navbar is position:fixed so it is always present, but a modal or the
+   * full-screen player (both z-50) covers it, which would leave the window
+   * un-grabbable. This strip sits above them and guarantees a continuous
+   * handle across the full width.
+   *
+   * We apply both:
+   * 1. html::before for self-test probe inspection and baseline drag area
+   * 2. .kovies-drag-strip real DOM element for reliable Chromium pointer-event
+   *    drag hit-testing.
+   */
+  html::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 14px;
+    z-index: 10000;
+    -webkit-app-region: drag;
+    app-region: drag;
+    pointer-events: auto;
+  }
+
+  .kovies-drag-strip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 18px;
+    z-index: 10000;
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
 </style>
 `;
+
+/**
+ * Real DOM node for the macOS drag strip. Injected immediately after <body>
+ * so it is present on first paint. A markup injection, not a script, so the
+ * strict CSP on app:// pages still holds.
+ */
+const MACOS_DRAG_STRIP = `<div class="kovies-drag-strip" aria-hidden="true"></div>`;
 
 async function serveFile(filePath: string, isHead = false): Promise<Response> {
   const ext = path.extname(filePath).toLowerCase();
@@ -114,6 +203,8 @@ async function serveFile(filePath: string, isHead = false): Promise<Response> {
     let html = await fs.readFile(filePath, 'utf8');
     if (process.platform === 'darwin') {
       html = html.replace('</head>', `${MACOS_CSS_OVERRIDE}</head>`);
+      // Real element for the drag strip, right after <body> so it paints first.
+      html = html.replace(/<body([^>]*)>/i, `<body$1>${MACOS_DRAG_STRIP}`);
     }
     contentBytes = new TextEncoder().encode(html);
   } else {

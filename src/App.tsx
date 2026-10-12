@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle } from 'lucide-react';
+import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award } from 'lucide-react';
 import { Navbar, type NavTab } from './components/navbar/Navbar';
 import { HeroSpotlight } from './components/hero/HeroSpotlight';
 import { MediaRail } from './components/rails/MediaRail';
@@ -9,6 +9,7 @@ import { TrailerModal } from './components/modal/TrailerModal';
 import { AuthModal } from './components/modal/AuthModal';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { Titlebar } from './components/Titlebar';
+import { LandingPage } from './components/landing/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { WatchlistProvider, useWatchlist } from './context/WatchlistContext';
 import { api, errorMessage as apiErrorMessage, isAbortError } from './api/client';
@@ -21,6 +22,15 @@ import type {
 } from './api/types';
 
 const isAbort = (err: unknown) => isAbortError(err);
+
+function isAppRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  // If running inside the Electron desktop shell, always render the streaming app
+  if (Boolean(window.koviesDesktop?.isDesktop)) return true;
+  const p = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+  // /app or subroutes like /app/movies, /app/search render the streaming player app
+  return p === '/app' || p.startsWith('/app/');
+}
 
 function TabError({ message, onRetry }: { message: unknown; onRetry?: () => void }) {
   const displayMsg = apiErrorMessage(message, 'Failed to load content. Please try again.');
@@ -45,6 +55,34 @@ function EmptyGrid({ message }: { message: string }) {
 }
 
 function MainApp() {
+  // If at root '/' or '/landing' or '/download' -> Landing Page
+  // If at '/app' or running inside desktop app -> Web App Player
+  const [viewMode, setViewMode] = useState<'app' | 'landing'>(() => (isAppRoute() ? 'app' : 'landing'));
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setViewMode(isAppRoute() ? 'app' : 'landing');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleOpenLanding = () => {
+    setViewMode('landing');
+    if (window.location.pathname !== '/' && window.location.pathname !== '/landing') {
+      window.history.pushState({}, '', '/');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLaunchApp = () => {
+    setViewMode('app');
+    if (window.location.pathname !== '/app') {
+      window.history.pushState({}, '', '/app');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const {
     continueWatching,
     historyStatus,
@@ -260,6 +298,10 @@ function MainApp() {
     'Thriller',
   ];
 
+  if (viewMode === 'landing') {
+    return <LandingPage onLaunchApp={handleLaunchApp} />;
+  }
+
   return (
     <div className="min-h-screen bg-canvas text-gray-100 flex flex-col justify-between">
       {/* Global Navbar */}
@@ -270,6 +312,7 @@ function MainApp() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onSelectMedia={(item) => setSelectedMedia(item)}
+        onOpenLanding={handleOpenLanding}
       />
 
       {/* Main Content Area */}
@@ -305,9 +348,9 @@ function MainApp() {
             ) : null}
 
             {/* Rails Container */}
-            <div className="space-y-4 -mt-6 sm:-mt-10 relative z-20">
+            <div className="space-y-4 -mt-10 sm:-mt-16 md:-mt-20 relative z-20">
               {isAuthenticated && historyStatus === 'ready' && continueWatching.length === 0 && !homeError && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
                   <div className="rounded-2xl border border-surface-800 bg-surface-900/50 px-5 py-4 text-sm text-gray-400">
                     <span className="font-semibold text-gray-200">Continue Watching is empty.</span>{' '}
                     Start any title and your position will sync across devices.
@@ -319,6 +362,7 @@ function MainApp() {
                 <MediaRail
                   title="Continue Watching"
                   subtitle="Jump right back into your active streams"
+                  icon={<History className="w-5 h-5 text-indigo-400" />}
                   items={continueWatching.map((h) => ({
                     id: h.tmdbId,
                     tmdbId: h.tmdbId,
@@ -339,6 +383,7 @@ function MainApp() {
                 <MediaRail
                   title="Trending Now"
                   subtitle="Top trending titles across global viewers"
+                  icon={<Flame className="w-5 h-5 text-amber-400" />}
                   items={homeData.trending}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item) => handlePlayMedia(item)}
@@ -350,6 +395,7 @@ function MainApp() {
                 <MediaRail
                   title="Popular Movies"
                   subtitle="Blockbuster films and fan favorites"
+                  icon={<Clapperboard className="w-5 h-5 text-primary" />}
                   items={homeData.popularMovies}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item) => handlePlayMedia(item)}
@@ -361,6 +407,7 @@ function MainApp() {
                 <MediaRail
                   title="Top Rated Series"
                   subtitle="Binge-worthy shows with critical acclaim"
+                  icon={<Award className="w-5 h-5 text-purple-400" />}
                   items={homeData?.popularTV || homeData?.topRated || []}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item) => handlePlayMedia(item)}
@@ -670,9 +717,18 @@ function MainApp() {
             <span className="font-title font-bold text-gray-300">KOVIES</span>
             <span>— Aetherium Cinema Experience</span>
           </div>
-          <div className="flex items-center gap-2 text-gray-400">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span>4K Adaptive HLS • Dynamic SubDL Subtitles • Live Mirror Fallback</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-gray-400">
+            <button
+              onClick={handleOpenLanding}
+              className="text-primary-hover hover:underline font-semibold transition-colors"
+            >
+              Download Native Apps
+            </button>
+            <span className="text-surface-700">•</span>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>4K Adaptive HLS • Dynamic SubDL Subtitles</span>
+            </div>
           </div>
         </div>
       </footer>

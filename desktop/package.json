@@ -16,7 +16,8 @@
     "icon": "node scripts/make-icon.mjs",
     "dist:win": "npm run build:web && npm run test && electron-builder --win --x64 --publish never",
     "dist:win:dir": "npm run build:web && npm run test && electron-builder --win dir --x64 --publish never",
-    "dist:mac": "npm run build:web && npm run test && electron-builder --mac dmg --publish never"
+    "dist:mac": "npm run dmg:background && npm run build:web && npm run test && electron-builder --mac dmg --publish never",
+    "dmg:background": "node scripts/make-dmg-background.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -68,14 +69,19 @@
     },
     "dmg": {
       "artifactName": "Kovies-${version}-${arch}.${ext}",
-      "background": null,
+      "background": "assets/dmg-background.png",
+      "iconSize": 128,
+      "window": {
+        "width": 660,
+        "height": 440
+      },
       "contents": [
         {
-          "x": 130,
+          "x": 195,
           "y": 220
         },
         {
-          "x": 410,
+          "x": 465,
           "y": 220,
           "type": "link",
           "path": "/Applications"

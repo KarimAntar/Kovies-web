@@ -6,6 +6,7 @@ import type { MediaItem, WatchHistoryItem } from '../../api/types';
 interface MediaRailProps {
   title: string;
   subtitle?: string;
+  icon?: React.ReactNode;
   items: MediaItem[];
   historyItems?: WatchHistoryItem[];
   onSelect: (item: MediaItem) => void;
@@ -15,6 +16,7 @@ interface MediaRailProps {
 export const MediaRail: React.FC<MediaRailProps> = ({
   title,
   subtitle,
+  icon,
   items,
   historyItems,
   onSelect,
@@ -36,16 +38,23 @@ export const MediaRail: React.FC<MediaRailProps> = ({
   }
 
   return (
-    <section className="relative group/rail py-4 sm:py-6">
+    <section className="relative group/rail py-3 sm:py-4">
       {/* Rail Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-3 sm:mb-4 flex items-end justify-between">
-        <div>
-          <h2 className="font-title text-xl sm:text-2xl font-bold text-white tracking-tight">
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="text-xs sm:text-sm text-gray-400 mt-0.5">{subtitle}</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-2.5 sm:mb-3 flex items-end justify-between">
+        <div className="flex items-center gap-3">
+          {icon && (
+            <div className="flex items-center justify-center p-2 rounded-xl bg-surface-800/80 border border-surface-700/60 shadow-inner shrink-0">
+              {icon}
+            </div>
           )}
+          <div>
+            <h2 className="font-title text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="text-xs sm:text-sm text-gray-400 mt-0.5">{subtitle}</p>
+            )}
+          </div>
         </div>
       </div>
 

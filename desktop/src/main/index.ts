@@ -12,6 +12,12 @@ import { loadWindowState, MIN_HEIGHT, MIN_WIDTH, trackWindowState } from './wind
 const BACKGROUND = '#0E0D13';
 const START_URL = `${APP_ORIGIN}/`;
 
+// Test/CI isolation: an override lets a second instance run against its own
+// profile instead of colliding with a real install over the single-instance
+// lock (both share the same userData directory by default).
+const userDataOverride = process.env.KOVIES_USER_DATA_DIR;
+if (userDataOverride) app.setPath('userData', path.resolve(userDataOverride));
+
 registerAppScheme();
 
 let mainWindow: BrowserWindow | null = null;

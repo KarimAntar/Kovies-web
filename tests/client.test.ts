@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { srtToVtt } from '../src/lib/srtToVtt';
-import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../src/lib/playback';
-import { mapApiUrl } from '../src/lib/apiUrl';
-import { playableSubtitles, groupSubtitles } from '../src/lib/subtitles';
-import type { StreamingSource, SubtitleTrack } from '../src/api/types';
+import { srtToVtt } from '../src/lib/srtToVtt.ts';
+import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../src/lib/playback.ts';
+import { mapApiUrl } from '../src/lib/apiUrl.ts';
+import { playableSubtitles, groupSubtitles } from '../src/lib/subtitles.ts';
+import type { StreamingSource, SubtitleTrack } from '../src/api/types.ts';
 
 test('srtToVtt handles CRLF, BOM, commas, and missing hours', () => {
   const srt = '﻿1\r\n00:01:02,123 --> 00:01:05,456\r\nHello world!\r\n\r\n2\r\n02:10,500 --> 02:15,000\r\nLine 2';
@@ -96,7 +96,7 @@ test('playableSubtitles filters duplicates and unrenderable formats', () => {
   assert.equal(groups[0].label, 'English');
 });
 
-import { parseVtt, activeCues } from '../src/lib/vtt';
+import { parseVtt, activeCues } from '../src/lib/vtt.ts';
 
 test('parseVtt extracts timed cues and activeCues filters by seconds', () => {
   const vtt = [
