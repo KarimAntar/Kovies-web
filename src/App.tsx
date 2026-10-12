@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle } from 'lucide-react';
 import { Navbar, type NavTab } from './components/navbar/Navbar';
 import { HeroSpotlight } from './components/hero/HeroSpotlight';
 import { MediaRail } from './components/rails/MediaRail';
@@ -7,18 +8,26 @@ import { DetailsModal } from './components/modal/DetailsModal';
 import { TrailerModal } from './components/modal/TrailerModal';
 import { AuthModal } from './components/modal/AuthModal';
 import { VideoPlayer } from './components/player/VideoPlayer';
-import { AuthProvider } from './context/AuthContext';
+import { Titlebar } from './components/Titlebar';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { WatchlistProvider, useWatchlist } from './context/WatchlistContext';
-import { useAuth } from './context/AuthContext';
-import { api, isAbortError } from './api/client';
+import { api, errorMessage as apiErrorMessage, isAbortError } from './api/client';
+import { imageUrl, FALLBACK_POSTER } from './lib/images';
+import type {
+  MediaItem,
+  HomeCatalogResponse,
+  StreamingSource,
+  VideoItem,
+} from './api/types';
 
 const isAbort = (err: unknown) => isAbortError(err);
 
-function TabError({ message, onRetry }: { message: string; onRetry?: () => void }) {
+function TabError({ message, onRetry }: { message: unknown; onRetry?: () => void }) {
+  const displayMsg = apiErrorMessage(message, 'Failed to load content. Please try again.');
   return (
     <div className="py-20 text-center text-sm text-gray-400 max-w-md mx-auto">
       <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-      <p className="mb-4 leading-relaxed">{message}</p>
+      <p className="mb-4 leading-relaxed">{displayMsg}</p>
       {(onRetry ?? undefined) !== undefined && (
         <button
           onClick={() => onRetry?.()}
@@ -34,16 +43,6 @@ function TabError({ message, onRetry }: { message: string; onRetry?: () => void 
 function EmptyGrid({ message }: { message: string }) {
   return <p className="py-16 text-center text-sm text-gray-400">{message}</p>;
 }
-import type {
-  MediaItem,
-  HomeCatalogResponse,
-  StreamingSource,
-  VideoItem,
-} from './api/types';
-import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle } from 'lucide-react';
-import { Titlebar } from './components/Titlebar';
-import { errorMessage as apiErrorMessage } from './api/client';
-import { imageUrl, FALLBACK_POSTER } from './lib/images';
 
 function MainApp() {
   const {
@@ -288,7 +287,7 @@ function MainApp() {
             ) : homeError && !homeData ? (
               <div className="w-full min-h-[50vh] flex flex-col items-center justify-center bg-surface-950 text-gray-400 gap-4 px-6 text-center">
                 <AlertTriangle className="w-10 h-10 text-amber-400" />
-                <p className="text-sm max-w-md leading-relaxed">{homeError}</p>
+                <p className="text-sm max-w-md leading-relaxed">{apiErrorMessage(homeError, 'Could not load the Kovies catalogue.')}</p>
                 <button
                   onClick={loadHome}
                   className="px-5 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-all"
@@ -471,7 +470,7 @@ function MainApp() {
               </div>
             ) : watchlistStatus === 'error' && watchlist.length === 0 ? (
               <div className="py-24 text-center text-sm text-gray-400">
-                <p className="mb-4">{watchlistError}</p>
+                <p className="mb-4">{apiErrorMessage(watchlistError, 'Could not load your list.')}</p>
                 <button onClick={() => refreshWatchlist()} className="px-5 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-semibold text-sm transition-all">
                   Retry
                 </button>

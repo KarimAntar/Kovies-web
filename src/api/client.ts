@@ -19,8 +19,8 @@ import { mapApiUrl } from '../lib/apiUrl';
 
 /**
  * Backend client. Every call goes through API_BASE:
- *  - web:     '/api/k/<path>' → Vercel gateway, which adds the API key server-side
- *  - desktop: '<apiBase>/<path>' → desktop main process injects the API key
+ *  - web:     '/api/k/<path>' -> Vercel gateway, which adds the API key server-side
+ *  - desktop: '<apiBase>/<path>' -> desktop main process injects the API key
  * No API key exists in this bundle.
  */
 
@@ -42,12 +42,35 @@ export function isAbortError(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError';
 }
 
+/**
+ * Robustly formats any error value (Error, ApiError, string, JSON error object,
+ * or unknown shape) into a human-readable string. Never returns "[object Object]".
+ */
 export function errorMessage(err: unknown, fallback = 'Something went wrong'): string {
+  if (typeof err === 'string' && err.trim().length > 0 && err !== '[object Object]') {
+    return err;
+  }
   if (err instanceof ApiError) {
     if (err.status === 0) return 'Network error — check your connection and try again.';
-    return err.message || fallback;
+    if (err.message && err.message !== '[object Object]') return err.message;
+    if (err.code) return `Error: ${err.code}`;
+    return fallback;
   }
-  if (err instanceof Error && err.message) return err.message;
+  if (err instanceof Error && err.message && err.message !== '[object Object]') {
+    return err.message;
+  }
+  if (err && typeof err === 'object') {
+    const obj = err as Record<string, unknown>;
+    if (typeof obj.message === 'string' && obj.message && obj.message !== '[object Object]') {
+      return obj.message;
+    }
+    if (typeof obj.error === 'string' && obj.error && obj.error !== '[object Object]') {
+      return obj.error;
+    }
+    if (typeof obj.code === 'string' && obj.code) {
+      return `Error: ${obj.code}`;
+    }
+  }
   return fallback;
 }
 
@@ -113,9 +136,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     let message = response.statusText || `Request failed (${response.status})`;
     let code: string | undefined;
     try {
-      const data = (await response.json()) as { message?: string; code?: string; error?: string };
-      message = data.message || data.error || message;
-      code = data.code;
+      const data = (await response.json()) as Record<string, unknown>;
+      if (typeof data.message === 'string' && data.message) message = data.message;
+      else if (typeof data.error === 'string' && data.error) message = data.error;
+      if (typeof data.code === 'string') code = data.code;
     } catch {
       // non-JSON error body
     }

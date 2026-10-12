@@ -81,8 +81,13 @@ function createWindow(): BrowserWindow {
     backgroundColor: BACKGROUND,
     title: 'Kovies',
     // Windows/Linux: frameless, the web app draws its own titlebar.
-    // macOS: keep native traffic lights over a hidden titlebar.
-    ...(isMac ? { titleBarStyle: 'hidden' as const } : { frame: false }),
+    // macOS: hidden titlebar with traffic light buttons inset nicely.
+    ...(isMac
+      ? {
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: 18, y: 16 },
+        }
+      : { frame: false }),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

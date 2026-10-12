@@ -85,13 +85,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'home', label: 'Home', icon: <Home className="w-4 h-4" /> },
-    { id: 'movies', label: 'Movies', icon: <Film className="w-4 h-4" /> },
-    { id: 'shows', label: 'Shows', icon: <Tv className="w-4 h-4" /> },
-    { id: 'watchlist', label: 'My List', icon: <Bookmark className="w-4 h-4" /> },
-    { id: 'discover', label: 'Discover', icon: <Compass className="w-4 h-4" /> },
-    { id: 'search', label: 'Search', icon: <Search className="w-4 h-4" /> },
+  // Desktop navigation pill tabs: primary catalog views (Search has its own dedicated input on desktop)
+  const desktopNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'home', label: 'Home', icon: <Home className="w-4 h-4 flex-shrink-0" /> },
+    { id: 'movies', label: 'Movies', icon: <Film className="w-4 h-4 flex-shrink-0" /> },
+    { id: 'shows', label: 'Shows', icon: <Tv className="w-4 h-4 flex-shrink-0" /> },
+    { id: 'watchlist', label: 'My List', icon: <Bookmark className="w-4 h-4 flex-shrink-0" /> },
+    { id: 'discover', label: 'Discover', icon: <Compass className="w-4 h-4 flex-shrink-0" /> },
+  ];
+
+  // Mobile navigation includes Search tab for phone touch targets
+  const mobileNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    ...desktopNavItems,
+    { id: 'search', label: 'Search', icon: <Search className="w-4 h-4 flex-shrink-0" /> },
   ];
 
   return (
@@ -99,16 +105,16 @@ export const Navbar: React.FC<NavbarProps> = ({
       style={{ top: 'var(--titlebar-h, 0px)' }}
       className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
         isScrolled
-          ? 'bg-canvas/90 backdrop-blur-md border-b border-primary/10 shadow-lg shadow-black/40 py-3'
-          : 'bg-gradient-to-b from-canvas/95 via-canvas/60 to-transparent py-5'
+          ? 'bg-canvas/90 backdrop-blur-md border-b border-primary/10 shadow-lg shadow-black/40 py-2.5'
+          : 'bg-gradient-to-b from-canvas/95 via-canvas/60 to-transparent py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
         {/* Left: Brand Logo & Navigation */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6 lg:gap-8">
           <button
             onClick={() => onTabChange('home')}
-            className="flex items-center gap-2.5 focus:outline-none group text-left"
+            className="flex items-center gap-2.5 focus:outline-none group text-left flex-shrink-0"
           >
             <img
               src="/kovies-symbol.png"
@@ -121,21 +127,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Desktop Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-1 bg-surface-800/60 p-1 rounded-full border border-surface-700/60 backdrop-blur-sm">
-            {navItems.map((item) => {
+          <nav className="hidden md:flex items-center gap-1 bg-surface-800/70 p-1 rounded-full border border-surface-700/60 backdrop-blur-sm shadow-inner">
+            {desktopNavItems.map((item) => {
               const active = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => onTabChange(item.id)}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3.5 lg:px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all select-none ${
                     active
                       ? 'bg-primary text-white shadow-md shadow-primary/30'
                       : 'text-gray-300 hover:text-white hover:bg-surface-700/50'
                   }`}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  <span className="whitespace-nowrap">{item.label}</span>
                 </button>
               );
             })}
@@ -161,10 +167,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onTabChange('search');
                   }
                 }}
-                placeholder="Search movies, shows..." 
-                className="w-44 sm:w-64 md:w-72 bg-surface-800/80 hover:bg-surface-800 focus:bg-surface-750 text-sm text-gray-100 placeholder-gray-400 pl-10 pr-8 py-2 rounded-full border border-surface-700/80 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                placeholder="Search movies, shows..."
+                className="w-40 sm:w-60 md:w-64 lg:w-72 h-9 bg-surface-800/80 hover:bg-surface-800 focus:bg-surface-750 text-sm text-gray-100 placeholder-gray-400 pl-9 pr-8 rounded-full border border-surface-700/80 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
               />
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" />
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
               {searchQuery && (
                 <button
                   onClick={() => {
@@ -207,7 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             alt={item.title || item.name || 'Poster'}
                             className="w-11 h-16 rounded-md object-cover bg-surface-900 flex-shrink-0"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/kovies-symbol.png';
+                              (e.target as HTMLImageElement).src = FALLBACK_POSTER;
                             }}
                           />
                           <div className="flex-1 min-w-0">
@@ -246,7 +252,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 p-1.5 rounded-full hover:bg-surface-800 transition-colors border border-surface-700 focus:outline-none"
+                  className="flex items-center gap-2 p-1 rounded-full hover:bg-surface-800 transition-colors border border-surface-700 focus:outline-none"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center text-white font-semibold text-xs shadow-inner">
                     {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
@@ -289,10 +295,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={openAuthModal}
-                className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-full shadow-md shadow-primary/20 transition-all hover:scale-102"
+                className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 h-9 rounded-full shadow-md shadow-primary/20 transition-all hover:scale-102 whitespace-nowrap"
               >
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign In</span>
+                <User className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline whitespace-nowrap">Sign In</span>
               </button>
             )}
           </div>
@@ -301,7 +307,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Navigation Bar at bottom or secondary row */}
       <div className="md:hidden flex items-center justify-around border-t border-surface-800/80 bg-canvas/95 backdrop-blur-md px-2 py-2 mt-2">
-        {navItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const active = activeTab === item.id;
           return (
             <button
@@ -312,7 +318,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               {item.icon}
-              <span className="text-[11px]">{item.label}</span>
+              <span className="text-[11px] whitespace-nowrap">{item.label}</span>
             </button>
           );
         })}

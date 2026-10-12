@@ -168,7 +168,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setSources(list);
       if (list.length === 0) {
         setSourceIndex(-1);
-        setStreamError('No playable streams were found for this title.');
+        setStreamError('No streams currently available for this title.');
         return;
       }
       const playable = list.findIndex(isPlayableHere);
@@ -202,7 +202,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       })
       .catch((err) => {
         if (signal.aborted || isAbortError(err)) return;
-        setStreamError(errorMessage(err, 'Could not load streams for this title.'));
+        const msg = errorMessage(err, 'No streams currently available for this title.');
+        setStreamError(msg === 'Not found' || msg.includes('404') ? 'No streams currently available for this title.' : msg);
       })
       .finally(() => {
         if (!signal.aborted) setSourcesLoading(false);
@@ -762,7 +763,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <AlertTriangle className="w-8 h-8" />
             </div>
             <h3 className="font-title text-xl font-bold text-white mb-2">Playback unavailable</h3>
-            <p className="text-sm text-gray-300 mb-6 leading-relaxed">{streamError}</p>
+            <p className="text-sm text-gray-300 mb-6 leading-relaxed">{typeof streamError === 'string' ? streamError : errorMessage(streamError, 'No streams currently available for this title.')}</p>
             <div className="flex flex-wrap justify-center gap-3">
               {nextPlayableIndex >= 0 && (
                 <button

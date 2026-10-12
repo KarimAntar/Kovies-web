@@ -57,3 +57,21 @@ test('rejects redirects, invalid JSON, and oversized bodies', async () => {
   assert.equal((await invoke('/api/k/auth/login', 'POST', '{bad', { 'content-type': 'application/json' })).code, 400);
   assert.equal((await invoke('/api/k/auth/login', 'POST', JSON.stringify({ data: 'a'.repeat(65536) }), { 'content-type': 'application/json' })).code, 413);
 });
+
+test('handles rewritten query.path and reconstructs extra search params', async () => {
+  process.env.KOVIES_API_KEY = 'test-only';
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), 'https://kovies.kerix.tech/api/catalog/movie/popular?page=1');
+    assert.equal(new Headers(options?.headers).get('x-api-key'), 'test-only');
+    return new Response('{"results":[]}', { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const req = Object.assign(Readable.from([]), {
+    url: '/api/k/[...path]?path=catalog&path=movie&path=popular&page=1',
+    method: 'GET',
+    headers: {},
+    query: { path: ['catalog', 'movie', 'popular'], page: '1' },
+  });
+  const res = response();
+  await handler(req as never, res as never);
+  assert.equal(res.code, 200);
+});

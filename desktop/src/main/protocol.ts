@@ -83,27 +83,51 @@ function respond(status: number, body: string, isHead = false): Response {
   });
 }
 
+const MACOS_CSS_OVERRIDE = `
+<style id="kovies-macos-desktop-layout">
+  /* Give macOS traffic light buttons (top-left) dedicated clearance */
+  header, [class*="Navbar"], [class*="navbar"] {
+    padding-left: 5rem !important;
+  }
+  /* Hide custom Windows titlebar and its window control buttons on macOS */
+  .desktop-titlebar, [class*="desktop-titlebar"] {
+    display: none !important;
+  }
+  :root {
+    --titlebar-h: 0px !important;
+  }
+</style>
+`;
+
 async function serveFile(filePath: string, isHead = false): Promise<Response> {
   const ext = path.extname(filePath).toLowerCase();
   const isHtml = ext === '.html';
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': MIME[ext] ?? 'application/octet-stream',
     'Content-Security-Policy': CONTENT_SECURITY_POLICY,
     'X-Content-Type-Options': 'nosniff',
     'Cache-Control': isHtml ? 'no-cache' : 'public, max-age=31536000, immutable',
   };
-  if (isHead) {
-    const stat = await fs.stat(filePath);
-    return new Response(null, {
-      status: 200,
-      headers: {
-        ...headers,
-        'Content-Length': String(stat.size),
-      },
-    });
+
+  let contentBytes: Uint8Array;
+  if (isHtml) {
+    let html = await fs.readFile(filePath, 'utf8');
+    if (process.platform === 'darwin') {
+      html = html.replace('</head>', `${MACOS_CSS_OVERRIDE}</head>`);
+    }
+    contentBytes = new TextEncoder().encode(html);
+  } else {
+    const data = await fs.readFile(filePath);
+    contentBytes = new Uint8Array(data);
   }
-  const data = await fs.readFile(filePath);
-  return new Response(new Uint8Array(data), {
+
+  headers['Content-Length'] = String(contentBytes.byteLength);
+
+  if (isHead) {
+    return new Response(null, { status: 200, headers });
+  }
+
+  return new Response(contentBytes as unknown as BodyInit, {
     status: 200,
     headers,
   });

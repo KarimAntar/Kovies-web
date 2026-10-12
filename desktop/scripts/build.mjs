@@ -1,13 +1,27 @@
 // Bundles main + preload into build/ with esbuild.
 // KOVIES_API_KEY (env, build time) is inlined into build/main.js ONLY.
 import { build } from 'esbuild';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync, rmSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outdir = path.join(root, 'build');
-const apiKey = process.env.KOVIES_API_KEY ?? '';
+
+// Fallback to reading desktop/.env or ../.env if process.env.KOVIES_API_KEY is not set
+let apiKey = process.env.KOVIES_API_KEY ?? '';
+if (!apiKey) {
+  for (const envPath of [path.join(root, '.env'), path.join(root, '..', '.env')]) {
+    if (existsSync(envPath)) {
+      const content = readFileSync(envPath, 'utf8');
+      const match = content.match(/^KOVIES_API_KEY\s*=\s*(["']?)([^"'\r\n]+)\1/m);
+      if (match && match[2]) {
+        apiKey = match[2].trim();
+        break;
+      }
+    }
+  }
+}
 
 rmSync(outdir, { recursive: true, force: true });
 

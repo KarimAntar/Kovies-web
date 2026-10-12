@@ -9,24 +9,69 @@ const PREFIXES = ['catalog/', 'movies/', 'tv/', 'sources/', 'subtitles/', 'ratin
 
 class RequestError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) { super(message); this.status = status; }
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
-function parseTarget(raw: string): { path: string; search: string } {
-  // Inspect before URL normalization, which otherwise removes dot segments.
-  if (!raw.startsWith('/api/k/')) throw new RequestError(400, 'Invalid API path');
-  const [pathname] = raw.split('?');
-  const path = pathname.slice('/api/k/'.length);
-  // Paths only contain backend identifiers/tokens. Reject encoded slashes,
-  // double encoding, backslashes, control chars, and traversal entirely.
-  if (!path || !/^[A-Za-z0-9_./-]+$/.test(path) || path.split('/').some(s => !s || s === '.' || s === '..')) {
+function parseTarget(req: VercelRequest): { path: string; search: string } {
+  let path = '';
+  let search = '';
+
+  const rawUrl = req.url || '';
+  const qIndex = rawUrl.indexOf('?');
+  const pathname = qIndex >= 0 ? rawUrl.slice(0, qIndex) : rawUrl;
+  const urlSearch = qIndex >= 0 ? rawUrl.slice(qIndex) : '';
+
+  // 1. Direct path from raw URL if it contains /api/k/...
+  const prefix = '/api/k/';
+  const idx = pathname.indexOf(prefix);
+  if (idx >= 0) {
+    const candidate = pathname.slice(idx + prefix.length);
+    // Ignore Vercel internal rewritten wildcard filenames like [...path]
+    if (candidate && !candidate.startsWith('[...')) {
+      path = candidate;
+      search = urlSearch;
+    }
+  }
+
+  // 2. Fallback to Vercel query.path (from file name [...path].ts)
+  if (!path && req.query && req.query.path) {
+    const rawPath = req.query.path;
+    path = Array.isArray(rawPath) ? rawPath.join('/') : String(rawPath);
+
+    // Build search string from remaining query parameters
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(req.query)) {
+      if (k === 'path') continue;
+      if (Array.isArray(v)) {
+        for (const item of v) q.append(k, item);
+      } else if (v !== undefined) {
+        q.append(k, String(v));
+      }
+    }
+    const s = q.toString();
+    search = s ? `?${s}` : '';
+  }
+
+  // If path is still empty and url had query string
+  if (!search && urlSearch) {
+    search = urlSearch;
+  }
+
+  // Clean trailing slashes
+  path = path.replace(/^\/+|\/+$/g, '');
+
+  if (!path || !/^[A-Za-z0-9_./-]+$/.test(path) || path.split('/').some((s) => !s || s === '.' || s === '..')) {
     throw new RequestError(400, 'Invalid API path');
   }
-  if (!SINGLE_PATHS.has(path) && !PREFIXES.some(prefix => path.startsWith(prefix))) {
+
+  if (!SINGLE_PATHS.has(path) && !PREFIXES.some((p) => path.startsWith(p))) {
     throw new RequestError(400, 'Invalid API path');
   }
-  const question = raw.indexOf('?');
-  return { path, search: question < 0 ? '' : raw.slice(question) };
+
+  return { path, search };
 }
 
 async function jsonBody(req: VercelRequest): Promise<string> {
@@ -47,7 +92,9 @@ async function jsonBody(req: VercelRequest): Promise<string> {
   try {
     const value: unknown = JSON.parse(body);
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('object required');
-  } catch { throw new RequestError(400, 'Invalid JSON body'); }
+  } catch {
+    throw new RequestError(400, 'Invalid JSON body');
+  }
   return body;
 }
 
@@ -60,10 +107,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const { path, search } = parseTarget(req.url ?? '');
+    const { path, search } = parseTarget(req);
     const method = req.method ?? 'GET';
-    if (!['GET', 'POST', 'PUT', 'DELETE'].includes(method) ||
-        (['POST', 'PUT'].includes(method) && !path.startsWith('auth/') && !path.startsWith('user/'))) {
+    if (
+      !['GET', 'POST', 'PUT', 'DELETE'].includes(method) ||
+      (['POST', 'PUT'].includes(method) && !path.startsWith('auth/') && !path.startsWith('user/'))
+    ) {
       res.setHeader('Allow', 'GET, POST, PUT, DELETE');
       return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -75,7 +124,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const controller = new AbortController();
     timer = setTimeout(() => controller.abort(), path.startsWith('sources/') ? 80_000 : 15_000);
     const upstream = await fetch(`${UPSTREAM}${path}${search}`, {
-      method, headers, body, redirect: 'manual', signal: controller.signal,
+      method,
+      headers,
+      body,
+      redirect: 'manual',
+      signal: controller.signal,
     });
     if (upstream.status >= 300 && upstream.status < 400) {
       await upstream.body?.cancel();
