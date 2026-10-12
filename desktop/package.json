@@ -49,6 +49,13 @@
         ]
       }
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KarimAntar",
+        "repo": "Kovies-web"
+      }
+    ],
     "asar": true,
     "npmRebuild": false,
     "artifactName": "Kovies-${version}-${arch}.${ext}",
@@ -121,5 +128,8 @@
   },
   "allowScripts": {
     "electron-winstaller": false
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

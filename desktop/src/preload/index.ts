@@ -1,7 +1,7 @@
 // Sandboxed preload. Exposes a narrow, typed bridge as window.koviesDesktop.
 // Never exposes ipcRenderer itself; every channel name is fixed here.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import { API_BASE, IPC, MEDIA_KEYS, type MediaKey } from '../shared/channels';
+import { API_BASE, IPC, MEDIA_KEYS, type MediaKey, type UpdateInfo, type UpdateProgress } from '../shared/channels';
 
 type Platform = 'win32' | 'darwin' | 'linux';
 
@@ -16,6 +16,11 @@ interface KoviesDesktopBridge {
   isMaximized(): Promise<boolean>;
   onMaximizedChange(cb: (maximized: boolean) => void): () => void;
   onMediaKey(cb: (key: MediaKey) => void): () => void;
+  checkForUpdates(): Promise<UpdateInfo | null>;
+  onUpdateAvailable(cb: (info: UpdateInfo) => void): () => void;
+  onUpdateProgress(cb: (progress: UpdateProgress) => void): () => void;
+  onUpdateDownloaded(cb: () => void): () => void;
+  installUpdate(): void;
 }
 
 function toPlatform(p: string): Platform {
@@ -50,6 +55,11 @@ const bridge: KoviesDesktopBridge = {
   isMaximized: async () => (await ipcRenderer.invoke(IPC.windowIsMaximized)) === true,
   onMaximizedChange: (cb) => subscribe(IPC.maximizedChanged, isBool, cb),
   onMediaKey: (cb) => subscribe(IPC.mediaKey, isMediaKey, cb),
+  checkForUpdates: async () => (await ipcRenderer.invoke(IPC.updateCheck)) as UpdateInfo | null,
+  onUpdateAvailable: (cb) => subscribe(IPC.updateAvailable, (v): v is UpdateInfo => typeof v === 'object' && v !== null, cb),
+  onUpdateProgress: (cb) => subscribe(IPC.updateProgress, (v): v is UpdateProgress => typeof v === 'object' && v !== null, cb),
+  onUpdateDownloaded: (cb) => subscribe(IPC.updateDownloaded, (_v): _v is void => true, cb),
+  installUpdate: () => ipcRenderer.send(IPC.updateInstall),
 };
 
 contextBridge.exposeInMainWorld('koviesDesktop', bridge);

@@ -7,6 +7,7 @@ import { hasApiKey, installNetworkHooks } from './network';
 import { registerAppProtocolHandler, registerAppScheme, resolveWebRoot } from './protocol';
 import { runSelfTest } from './selftest';
 import { StreamHeaderStore } from './streamHeaders';
+import { UpdateManager } from './updater';
 import { loadWindowState, MIN_HEIGHT, MIN_WIDTH, trackWindowState } from './windowState';
 
 const BACKGROUND = '#0E0D13';
@@ -157,9 +158,18 @@ if (!app.requestSingleInstanceLock()) {
 
     registerAppProtocolHandler(webRoot);
     configureSession(streams);
-    registerIpc(streams);
+    const updater = new UpdateManager();
+    registerIpc(streams, updater);
     mainWindow = createWindow();
+    updater.setWindow(mainWindow);
     registerMediaKeys();
+
+    if (app.isPackaged) {
+      // Check for updates 5 seconds after startup
+      setTimeout(() => {
+        void updater.checkForUpdates();
+      }, 5000);
+    }
 
     if (process.env.KOVIES_SELFTEST === '1') void runSelfTest(mainWindow);
 

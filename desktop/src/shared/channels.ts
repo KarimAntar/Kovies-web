@@ -10,7 +10,26 @@ export const IPC = {
   // main -> renderer
   maximizedChanged: 'kovies:window:maximized-changed',
   mediaKey: 'kovies:media-key',
+  // Auto-Update
+  updateCheck: 'kovies:update:check',
+  updateAvailable: 'kovies:update:available',
+  updateProgress: 'kovies:update:progress',
+  updateDownloaded: 'kovies:update:downloaded',
+  updateInstall: 'kovies:update:install',
 } as const;
+
+export interface UpdateInfo {
+  version: string;
+  releaseDate?: string;
+  releaseNotes?: string;
+  downloadUrl?: string;
+}
+
+export interface UpdateProgress {
+  percent: number;
+  transferred: number;
+  total: number;
+}
 
 export const APP_SCHEME = 'app';
 export const APP_HOST = 'kovies';

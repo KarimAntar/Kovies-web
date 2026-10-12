@@ -4,6 +4,7 @@ import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } fr
 import { IPC, isAppUrl } from '../shared/channels';
 import { log } from './log';
 import { StreamHeaderError, validateRegistration, type StreamHeaderStore } from './streamHeaders';
+import type { UpdateManager } from './updater';
 
 function trustedWindow(event: IpcMainEvent | IpcMainInvokeEvent): BrowserWindow | null {
   const frame = event.senderFrame;
@@ -12,7 +13,7 @@ function trustedWindow(event: IpcMainEvent | IpcMainInvokeEvent): BrowserWindow 
   return BrowserWindow.fromWebContents(event.sender);
 }
 
-export function registerIpc(streams: StreamHeaderStore): void {
+export function registerIpc(streams: StreamHeaderStore, updater?: UpdateManager): void {
   ipcMain.handle(IPC.registerStreamHeaders, (event, streamUrl: unknown, headers: unknown) => {
     if (!trustedWindow(event)) throw new Error('untrusted sender');
     try {
@@ -35,4 +36,16 @@ export function registerIpc(streams: StreamHeaderStore): void {
     else win.maximize();
   });
   ipcMain.on(IPC.windowClose, (event) => trustedWindow(event)?.close());
+
+  // Auto-Update IPC
+  if (updater) {
+    ipcMain.handle(IPC.updateCheck, async (event) => {
+      if (!trustedWindow(event)) return null;
+      return await updater.checkForUpdates();
+    });
+    ipcMain.on(IPC.updateInstall, (event) => {
+      if (!trustedWindow(event)) return;
+      updater.installUpdate();
+    });
+  }
 }
