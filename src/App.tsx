@@ -349,6 +349,18 @@ function MainApp() {
 
             {/* Rails Container */}
             <div className="space-y-2 mt-0 relative z-20">
+              {/* Trending Now Rail */}
+              {homeData?.trending && (
+                <MediaRail
+                  title="Trending Now"
+                  subtitle="Top trending titles across global viewers"
+                  icon={<Flame className="w-5 h-5 text-amber-400" />}
+                  items={homeData.trending}
+                  onSelect={(item) => setSelectedMedia(item)}
+                  onPlay={(item) => handlePlayMedia(item)}
+                />
+              )}
+
               {isAuthenticated && historyStatus === 'ready' && continueWatching.length === 0 && !homeError && (
                 <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-4">
                   <div className="rounded-2xl border border-surface-800 bg-surface-900/50 px-5 py-4 text-sm text-gray-400">
@@ -375,18 +387,6 @@ function MainApp() {
                   historyItems={continueWatching}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item, s, ep) => handlePlayMedia(item, s, ep)}
-                />
-              )}
-
-              {/* Trending Now Rail */}
-              {homeData?.trending && (
-                <MediaRail
-                  title="Trending Now"
-                  subtitle="Top trending titles across global viewers"
-                  icon={<Flame className="w-5 h-5 text-amber-400" />}
-                  items={homeData.trending}
-                  onSelect={(item) => setSelectedMedia(item)}
-                  onPlay={(item) => handlePlayMedia(item)}
                 />
               )}
 
