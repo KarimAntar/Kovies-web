@@ -15,6 +15,14 @@ class RequestError extends Error {
   }
 }
 
+function cleanSearch(searchStr: string): string {
+  if (!searchStr) return '';
+  const sp = new URLSearchParams(searchStr.startsWith('?') ? searchStr.slice(1) : searchStr);
+  sp.delete('path');
+  const s = sp.toString();
+  return s ? `?${s}` : '';
+}
+
 function parseTarget(req: VercelRequest): { path: string; search: string } {
   let path = '';
   let search = '';
@@ -32,7 +40,7 @@ function parseTarget(req: VercelRequest): { path: string; search: string } {
     // Ignore Vercel internal rewritten wildcard filenames like [...path]
     if (candidate && !candidate.startsWith('[...')) {
       path = candidate;
-      search = urlSearch;
+      search = cleanSearch(urlSearch);
     }
   }
 
