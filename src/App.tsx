@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award } from 'lucide-react';
+import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award, Zap } from 'lucide-react';
 import { Navbar, type NavTab } from './components/navbar/Navbar';
 import { HeroSpotlight } from './components/hero/HeroSpotlight';
 import { MediaRail } from './components/rails/MediaRail';
@@ -298,13 +298,13 @@ function MainApp() {
     });
   };
 
-  // Featured Spotlight item (from homeData.featured or popular)
-  const spotlightItem =
+  // Top 5 spotlight items (featured or trending)
+  const spotlightItems =
     homeData?.featured && homeData.featured.length > 0
-      ? homeData.featured[0]
+      ? homeData.featured.slice(0, 5)
       : homeData?.trending && homeData.trending.length > 0
-      ? homeData.trending[0]
-      : null;
+      ? homeData.trending.slice(0, 5)
+      : [];
 
   // Filter tab items by genre if applicable
   const filteredTabItems =
@@ -368,9 +368,9 @@ function MainApp() {
                   Try again
                 </button>
               </div>
-            ) : spotlightItem ? (
+            ) : spotlightItems.length > 0 ? (
               <HeroSpotlight
-                item={spotlightItem}
+                items={spotlightItems}
                 onPlay={(item) => handlePlayMedia(item)}
                 onOpenTrailer={(item) => handleOpenTrailer(item)}
                 onOpenDetails={(item) => setSelectedMedia(item)}
@@ -386,6 +386,18 @@ function MainApp() {
                   subtitle="Top trending titles across global viewers"
                   icon={<Flame className="w-5 h-5 text-amber-400" />}
                   items={homeData.trending}
+                  onSelect={(item) => setSelectedMedia(item)}
+                  onPlay={(item) => handlePlayMedia(item)}
+                />
+              )}
+
+              {/* Cinejoy Instant Streams Rail */}
+              {homeData?.cinejoyTrending && homeData.cinejoyTrending.length > 0 && (
+                <MediaRail
+                  title="Cinejoy Instant 1080p"
+                  subtitle="Streamable right now, no waiting on sources"
+                  icon={<Zap className="w-5 h-5 text-emerald-400" />}
+                  items={homeData.cinejoyTrending}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item) => handlePlayMedia(item)}
                 />

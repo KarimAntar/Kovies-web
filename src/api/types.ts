@@ -137,6 +137,7 @@ export interface SubtitlesResponse {
 export interface HomeCatalogResponse {
   featured: MediaItem[];
   trending: MediaItem[];
+  cinejoyTrending?: MediaItem[];
   popularMovies: MediaItem[];
   popularTV: MediaItem[];
   topRated: MediaItem[];
