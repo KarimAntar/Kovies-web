@@ -5,7 +5,7 @@ export const config = { api: { bodyParser: false } };
 const UPSTREAM = 'https://kovies.kerix.tech/api/';
 const BODY_LIMIT = 64 * 1024;
 const SINGLE_PATHS = new Set(['home', 'trending', 'search', 'health']);
-const PREFIXES = ['catalog/', 'movies/', 'tv/', 'sources/', 'subtitles/', 'ratings/', 'auth/', 'user/'];
+const PREFIXES = ['catalog/', 'discover/', 'movies/', 'tv/', 'sources/', 'subtitles/', 'ratings/', 'auth/', 'user/'];
 
 class RequestError extends Error {
   readonly status: number;

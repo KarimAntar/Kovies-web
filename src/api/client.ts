@@ -1,5 +1,6 @@
 import type {
   HomeCatalogResponse,
+  ProviderTitlesResponse,
   MediaDetails,
   MediaType,
   SourcesResponse,
@@ -171,6 +172,16 @@ export const api = {
 
   getPopular(type: MediaType, page = 1, signal?: AbortSignal): Promise<PagedResponse> {
     return request(`catalog/${type}/popular${qs({ page })}`, { signal });
+  },
+
+  /** Titles streaming on one platform (Browse by Provider). */
+  getProviderTitles(
+    providerId: number,
+    type: 'movie' | 'tv',
+    page = 1,
+    signal?: AbortSignal
+  ): Promise<ProviderTitlesResponse> {
+    return request(`discover/provider${qs({ provider_id: providerId, type, page })}`, { signal });
   },
 
   getMovieDetails(tmdbId: number, signal?: AbortSignal): Promise<MediaDetails> {

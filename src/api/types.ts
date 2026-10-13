@@ -138,6 +138,12 @@ export interface HomeCatalogResponse {
   featured: MediaItem[];
   trending: MediaItem[];
   cinejoyTrending?: MediaItem[];
+  /** Movies only — Cinejoy-style split of trending (additive; absent on older APIs). */
+  trendingMovies?: MediaItem[];
+  /** TV shows only. */
+  trendingSeries?: MediaItem[];
+  /** Streaming platforms for the "Browse by Provider" row. */
+  providers?: StreamingProvider[];
   popularMovies: MediaItem[];
   popularTV: MediaItem[];
   topRated: MediaItem[];
@@ -234,4 +240,21 @@ export interface WatchlistPayload {
   backdropPath?: string | null;
   voteAverage?: number | null;
   releaseDate?: string | null;
+}
+
+/** A streaming platform (Netflix, Disney Plus, ...) from the TMDB watch-provider catalogue. */
+export interface StreamingProvider {
+  id: number;
+  name: string;
+  logo: string | null;
+}
+
+export interface ProviderTitlesResponse {
+  provider: StreamingProvider;
+  type: 'movie' | 'tv';
+  page: number;
+  total_pages: number;
+  total_results: number;
+  pageSize: number;
+  results: MediaItem[];
 }

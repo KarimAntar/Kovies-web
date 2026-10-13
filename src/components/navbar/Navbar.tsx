@@ -7,7 +7,7 @@ import { api } from '../../api/client';
 import type { MediaItem } from '../../api/types';
 import { imageUrl, FALLBACK_POSTER } from '../../lib/images';
 
-export type NavTab = 'home' | 'movies' | 'shows' | 'watchlist' | 'discover' | 'search';
+export type NavTab = 'home' | 'movies' | 'shows' | 'watchlist' | 'discover' | 'search' | 'provider';
 
 interface NavbarProps {
   activeTab: NavTab;

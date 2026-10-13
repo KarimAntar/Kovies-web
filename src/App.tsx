@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award, Zap } from 'lucide-react';
+import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award, ChevronDown } from 'lucide-react';
 import { Navbar, type NavTab } from './components/navbar/Navbar';
 import { HeroSpotlight } from './components/hero/HeroSpotlight';
 import { MediaRail } from './components/rails/MediaRail';
 import { MediaCard } from './components/rails/MediaCard';
+import { ProviderRow } from './components/providers/ProviderRow';
 import { DetailsModal } from './components/modal/DetailsModal';
 import { TrailerModal } from './components/modal/TrailerModal';
 import { AuthModal } from './components/modal/AuthModal';
@@ -17,6 +18,7 @@ import { imageUrl, FALLBACK_POSTER } from './lib/images';
 import type {
   MediaItem,
   HomeCatalogResponse,
+  StreamingProvider,
   StreamingSource,
   VideoItem,
 } from './api/types';
@@ -110,6 +112,16 @@ function MainApp() {
   const [reloadTick, setReloadTick] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Browse by Provider (Netflix, Disney+, ...)
+  const [activeProvider, setActiveProvider] = useState<StreamingProvider | null>(null);
+  const [providerType, setProviderType] = useState<'movie' | 'tv'>('movie');
+  const [providerItems, setProviderItems] = useState<MediaItem[]>([]);
+  const [providerPage, setProviderPage] = useState(1);
+  const [providerTotalPages, setProviderTotalPages] = useState(1);
+  const [isLoadingProvider, setIsLoadingProvider] = useState(false);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [providerReload, setProviderReload] = useState(0);
+
   // Modals & Player State
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [trailerData, setTrailerData] = useState<{
@@ -146,6 +158,56 @@ function MainApp() {
   useEffect(() => {
     loadHome();
   }, [loadHome]);
+
+  // Load first page of titles whenever the provider or movie/show toggle changes
+  useEffect(() => {
+    if (activeTab !== 'provider' || !activeProvider) return;
+    const controller = new AbortController();
+    setIsLoadingProvider(true);
+    setProviderError(null);
+    setProviderItems([]);
+    setProviderPage(1);
+    api
+      .getProviderTitles(activeProvider.id, providerType, 1, controller.signal)
+      .then((res) => {
+        setProviderItems(res.results || []);
+        setProviderTotalPages(res.total_pages || 1);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) setProviderError(apiErrorMessage(err, 'Could not load this provider.'));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingProvider(false);
+      });
+    return () => controller.abort();
+  }, [activeTab, activeProvider, providerType, providerReload]);
+
+  const [isLoadingMoreProvider, setIsLoadingMoreProvider] = useState(false);
+  const loadMoreProvider = useCallback(async () => {
+    if (!activeProvider || isLoadingMoreProvider) return;
+    const next = providerPage + 1;
+    setIsLoadingMoreProvider(true);
+    try {
+      const res = await api.getProviderTitles(activeProvider.id, providerType, next);
+      setProviderItems((prev) => {
+        const seen = new Set(prev.map((m) => m.id || m.tmdbId));
+        return [...prev, ...(res.results || []).filter((m) => !seen.has(m.id || m.tmdbId))];
+      });
+      setProviderPage(next);
+      setProviderTotalPages(res.total_pages || providerTotalPages);
+    } catch (err) {
+      setProviderError(apiErrorMessage(err, 'Could not load more titles.'));
+    } finally {
+      setIsLoadingMoreProvider(false);
+    }
+  }, [activeProvider, isLoadingMoreProvider, providerPage, providerType, providerTotalPages]);
+
+  const openProvider = useCallback((provider: StreamingProvider) => {
+    setActiveProvider(provider);
+    setProviderType('movie');
+    setActiveTab('provider');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // Load Movies or Shows Tab Data
   useEffect(() => {
@@ -379,25 +441,41 @@ function MainApp() {
 
             {/* Rails Container */}
             <div className="space-y-2 mt-0 relative z-20">
-              {/* Trending Now Rail */}
-              {homeData?.trending && (
+              {/* Browse by Provider */}
+              {homeData?.providers && homeData.providers.length > 0 && (
+                <div className="pt-4">
+                  <ProviderRow providers={homeData.providers} onSelect={openProvider} />
+                </div>
+              )}
+
+              {/* Trending — movies and series are separate rails (falls back to the mixed rail on older APIs) */}
+              {homeData?.trendingMovies && homeData.trendingMovies.length > 0 ? (
                 <MediaRail
-                  title="Trending Now"
-                  subtitle="Top trending titles across global viewers"
+                  title="Trending Movies"
+                  subtitle="What everyone is watching this week"
                   icon={<Flame className="w-5 h-5 text-amber-400" />}
-                  items={homeData.trending}
+                  items={homeData.trendingMovies}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item) => handlePlayMedia(item)}
                 />
+              ) : (
+                homeData?.trending && (
+                  <MediaRail
+                    title="Trending Now"
+                    subtitle="Top trending titles across global viewers"
+                    icon={<Flame className="w-5 h-5 text-amber-400" />}
+                    items={homeData.trending}
+                    onSelect={(item) => setSelectedMedia(item)}
+                    onPlay={(item) => handlePlayMedia(item)}
+                  />
+                )
               )}
-
-              {/* Cinejoy Instant Streams Rail */}
-              {homeData?.cinejoyTrending && homeData.cinejoyTrending.length > 0 && (
+              {homeData?.trendingSeries && homeData.trendingSeries.length > 0 && (
                 <MediaRail
-                  title="Cinejoy Instant 1080p"
-                  subtitle="Streamable right now, no waiting on sources"
-                  icon={<Zap className="w-5 h-5 text-emerald-400" />}
-                  items={homeData.cinejoyTrending}
+                  title="Trending Series"
+                  subtitle="Binge-worthy shows climbing the charts"
+                  icon={<Tv className="w-5 h-5 text-sky-400" />}
+                  items={homeData.trendingSeries}
                   onSelect={(item) => setSelectedMedia(item)}
                   onPlay={(item) => handlePlayMedia(item)}
                 />
@@ -464,6 +542,86 @@ function MainApp() {
                 />
               )}
             </div>
+          </div>
+        )}
+
+        {/* Provider Tab */}
+        {activeTab === 'provider' && activeProvider && (
+          <div className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-24 sm:pt-28">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                {activeProvider.logo && (
+                  <img
+                    src={activeProvider.logo}
+                    alt=""
+                    className="w-12 h-12 rounded-xl border border-white/10 object-cover"
+                    draggable={false}
+                  />
+                )}
+                <div>
+                  <h1 className="font-title text-2xl sm:text-3xl font-extrabold text-white">{activeProvider.name}</h1>
+                  <p className="text-sm text-gray-400">Popular {providerType === 'movie' ? 'movies' : 'series'} streaming on {activeProvider.name}</p>
+                </div>
+              </div>
+              <div role="tablist" aria-label="Content type" className="inline-flex rounded-full bg-surface-800 p-1 border border-white/10">
+                {([['movie', 'Movies'], ['tv', 'Series']] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    role="tab"
+                    aria-selected={providerType === value}
+                    onClick={() => setProviderType(value)}
+                    className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                      providerType === value ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {homeData?.providers && (
+              <div className="-mx-4 sm:-mx-8 md:-mx-12 lg:-mx-16 mb-8">
+                <ProviderRow providers={homeData.providers} activeId={activeProvider.id} onSelect={openProvider} />
+              </div>
+            )}
+
+            {isLoadingProvider ? (
+              <div className="py-24 flex items-center justify-center gap-2 text-gray-400">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                <span>Loading {activeProvider.name}...</span>
+              </div>
+            ) : providerError && providerItems.length === 0 ? (
+              <TabError message={providerError} onRetry={() => setProviderReload((n) => n + 1)} />
+            ) : providerItems.length === 0 ? (
+              <EmptyGrid message={`No ${providerType === 'movie' ? 'movies' : 'series'} found on ${activeProvider.name}.`} />
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {providerItems.map((item) => (
+                    <MediaCard
+                      key={`provider-${providerType}-${item.id || item.tmdbId}`}
+                      item={item}
+                      onSelect={(it) => setSelectedMedia(it)}
+                      onPlay={(it) => handlePlayMedia(it)}
+                    />
+                  ))}
+                </div>
+                {providerPage < providerTotalPages && (
+                  <div className="flex justify-center mt-10">
+                    <button
+                      onClick={loadMoreProvider}
+                      disabled={isLoadingMoreProvider}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-surface-800 hover:bg-surface-700 border border-white/10 text-white text-sm font-semibold transition-colors disabled:opacity-60"
+                    >
+                      {isLoadingMoreProvider ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
+                      {isLoadingMoreProvider ? 'Loading...' : 'Load more'}
+                    </button>
+                  </div>
+                )}
+                {providerError && <p className="mt-4 text-center text-sm text-amber-400">{providerError}</p>}
+              </>
+            )}
           </div>
         )}
 
