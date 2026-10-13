@@ -11,12 +11,12 @@ export const FALLBACK_PROVIDERS: StreamingProvider[] = [
   { id: 2303, name: 'Paramount Plus', logo: 'https://image.tmdb.org/t/p/w154/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png' },
   { id: 386, name: 'Peacock Premium', logo: 'https://image.tmdb.org/t/p/w154/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png' },
   { id: 283, name: 'Crunchyroll', logo: 'https://image.tmdb.org/t/p/w154/uFL3c4Cq8M6WoLymlC5Y8bmGytV.png' },
-  { id: 43, name: 'Starz', logo: 'https://image.tmdb.org/t/p/w154/h5D8V197yj9aBEiq79StSVbZfl8.png' },
+  { id: 43, name: 'Starz', logo: 'https://image.tmdb.org/t/p/w154/h25xjouKmiSmFiiqw0aDXbxGZo7.png' },
   { id: 526, name: 'AMC+', logo: 'https://image.tmdb.org/t/p/w154/wsCUflcmL4dCkzBUaGP8cj1cTkh.png' },
   { id: 583, name: 'MGM Plus', logo: 'https://image.tmdb.org/t/p/w154/gk7O3l9qHttE9F3hgDNnhbhlOs7.png' },
   { id: 192, name: 'YouTube', logo: 'https://image.tmdb.org/t/p/w154/5Maob4o5w8oZnNeYpCDyVFD3M7X.png' },
-  { id: 73, name: 'Tubi TV', logo: 'https://image.tmdb.org/t/p/w154/bZVC9qRGqlURv8UGGAZ4e5Fv66g.png' },
-  { id: 300, name: 'Pluto TV', logo: 'https://image.tmdb.org/t/p/w154/5NY25hDExu7319m1z2q2wD499m6.png' },
+  { id: 73, name: 'Tubi TV', logo: 'https://image.tmdb.org/t/p/w154/9dEuvA8wg5TSeFBZlPxSVxFdimJ.png' },
+  { id: 300, name: 'Pluto TV', logo: 'https://image.tmdb.org/t/p/w154/fN4czqaMQNLeF6sSSIjGbAWzvwK.png' },
 ];
 
 interface ProviderRowProps {
