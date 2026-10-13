@@ -151,3 +151,41 @@ test('api client deleteHistory formats request URL with optional query parameter
     globalThis.fetch = originalFetch;
   }
 });
+
+import { fetchSkipSegments } from '../src/lib/introdb.ts';
+
+test('fetchSkipSegments parses and caches TheIntroDB responses', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = '';
+  globalThis.fetch = async (url) => {
+    requestedUrl = String(url);
+    return new Response(
+      JSON.stringify({
+        tmdb_id: 1399,
+        intro: [{ start_ms: 85000, end_ms: 175000 }],
+        recap: [{ start_ms: 0, end_ms: 45000 }],
+        credits: [{ start_ms: 3200000, end_ms: 3350000 }],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  };
+
+  try {
+    const segments = await fetchSkipSegments(1399, 'tv', 1, 1);
+    assert.ok(segments);
+    assert.equal(segments.intro?.startSec, 85);
+    assert.equal(segments.intro?.endSec, 175);
+    assert.equal(segments.recap?.startSec, 0);
+    assert.equal(segments.recap?.endSec, 45);
+    assert.equal(segments.credits?.startSec, 3200);
+    assert.equal(segments.credits?.endSec, 3350);
+    assert.equal(requestedUrl.includes('tmdb_id=1399&season=1&episode=1'), true);
+
+    // Test caching (fetch should not be called again)
+    globalThis.fetch = () => { throw new Error('Must use cache'); };
+    const cached = await fetchSkipSegments(1399, 'tv', 1, 1);
+    assert.deepEqual(cached, segments);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

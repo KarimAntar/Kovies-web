@@ -15,12 +15,14 @@ import {
   Loader2,
   AlertTriangle,
   SkipForward,
+  FastForward,
 } from 'lucide-react';
 import type { MediaItem, MediaType, StreamingSource, SubtitleTrack } from '../../api/types';
 import { api, errorMessage, isAbortError } from '../../api/client';
 import { createVttBlobUrl, srtToVtt } from '../../lib/srtToVtt';
 import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../../lib/playback';
 import { parseVtt, activeCues, type VttCue } from '../../lib/vtt';
+import { fetchSkipSegments, type SkipSegments } from '../../lib/introdb';
 import { groupSubtitles, playableSubtitles } from '../../lib/subtitles';
 import { desktop, isDesktop } from '../../platform';
 import { useWatchlist } from '../../context/WatchlistContext';
@@ -138,6 +140,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [subtitleLoading, setSubtitleLoading] = useState(false);
   const [subtitleError, setSubtitleError] = useState<string | null>(null);
   const [subtitleCues, setSubtitleCues] = useState<VttCue[]>([]);
+  const [subtitleOffsetSec, setSubtitleOffsetSec] = useState<number>(0);
+  const [skipSegments, setSkipSegments] = useState<SkipSegments | null>(null);
   const subtitleAbortRef = useRef<AbortController | null>(null);
   const subtitleGroups = useMemo(() => groupSubtitles(subtitleTracks), [subtitleTracks]);
 
@@ -158,6 +162,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     },
     recordProgress
   );
+
+  // ---------------------------------------------------------------------------
+  // TheIntroDB Skip Segments (Option E)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchSkipSegments(tmdbId, mediaType, season, episode, controller.signal)
+      .then((segments) => {
+        if (!controller.signal.aborted) {
+          setSkipSegments(segments);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setSkipSegments(null);
+        }
+      });
+    return () => controller.abort();
+  }, [tmdbId, mediaType, season, episode]);
 
   // ---------------------------------------------------------------------------
   // Load sources + subtitle list (cancelled when the title/episode changes)
@@ -343,6 +366,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const selectSubtitle = useCallback((track: SubtitleTrack | null, remember = true) => {
     subtitleAbortRef.current?.abort();
     setSubtitleError(null);
+    setSubtitleOffsetSec(0);
     setActiveSubtitle(track);
     if (remember) writeSubtitlePref(track ? track.language : null);
     if (!track) {
@@ -502,6 +526,52 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, []);
 
+  const shownTime = scrubTime ?? currentTime;
+
+  const activeSkip = useMemo(() => {
+    if (!skipSegments) return null;
+    const t = shownTime;
+    if (skipSegments.recap && t >= skipSegments.recap.startSec && t < skipSegments.recap.endSec) {
+      return {
+        type: 'recap' as const,
+        label: 'Skip Recap',
+        targetSec: skipSegments.recap.endSec + 0.5,
+        isNextEpisode: false,
+      };
+    }
+    if (skipSegments.intro && t >= skipSegments.intro.startSec && t < skipSegments.intro.endSec) {
+      return {
+        type: 'intro' as const,
+        label: 'Skip Intro',
+        targetSec: skipSegments.intro.endSec + 0.5,
+        isNextEpisode: false,
+      };
+    }
+    if (skipSegments.credits && t >= skipSegments.credits.startSec && t < skipSegments.credits.endSec) {
+      return {
+        type: 'credits' as const,
+        label: isTv && onNavigateEpisode ? 'Next Episode' : 'Skip Credits',
+        targetSec: skipSegments.credits.endSec + 0.5,
+        isNextEpisode: isTv && Boolean(onNavigateEpisode),
+      };
+    }
+    return null;
+  }, [skipSegments, shownTime, isTv, onNavigateEpisode]);
+
+  const handleSkip = useCallback(() => {
+    if (!activeSkip) return;
+    if (activeSkip.isNextEpisode && onNavigateEpisode) {
+      onNavigateEpisode(1);
+    } else {
+      const video = videoRef.current;
+      if (video) {
+        const dest = Math.min(video.duration || activeSkip.targetSec, activeSkip.targetSec);
+        video.currentTime = dest;
+        setCurrentTime(dest);
+      }
+    }
+  }, [activeSkip, onNavigateEpisode]);
+
   // ---------------------------------------------------------------------------
   // Keyboard + desktop media keys (latest actions via ref → single listener)
   // ---------------------------------------------------------------------------
@@ -512,6 +582,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     toggleMute,
     toggleFullscreen,
     toggleCaptions,
+    handleSkip,
+    activeSkip,
     onClose,
     onNavigateEpisode,
     poke,
@@ -526,6 +598,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       toggleMute,
       toggleFullscreen,
       toggleCaptions,
+      handleSkip,
+      activeSkip,
       onClose,
       onNavigateEpisode,
       poke,
@@ -539,6 +613,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     toggleMute,
     toggleFullscreen,
     toggleCaptions,
+    handleSkip,
+    activeSkip,
     onClose,
     onNavigateEpisode,
     poke,
@@ -595,6 +671,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         case 'C':
           e.preventDefault();
           a.toggleCaptions();
+          break;
+        case 's':
+        case 'S':
+          if (a.activeSkip) {
+            e.preventDefault();
+            a.handleSkip();
+          }
           break;
         case 'Escape':
           e.preventDefault();
@@ -688,9 +771,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(video.muted || video.volume === 0);
   };
 
-  const shownTime = scrubTime ?? currentTime;
   const loading = !streamError && (sourcesLoading || isBuffering);
-  const showSubtitleOverlay = subtitleCues.length > 0 ? activeCues(subtitleCues, shownTime) : [];
+  const showSubtitleOverlay =
+    subtitleCues.length > 0 ? activeCues(subtitleCues, shownTime + subtitleOffsetSec) : [];
   // Native macOS traffic lights sit over the window's top-left corner.
   const isMacDesktop = desktop?.platform === 'darwin';
 
@@ -823,6 +906,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Netflix-style Skip Button */}
+      {activeSkip && !streamError && (
+        <div
+          className="absolute right-6 sm:right-10 z-30 pointer-events-auto transition-all duration-300"
+          style={{
+            bottom: showControls ? '6.5rem' : '2.5rem',
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="group flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-surface-900/90 hover:bg-surface-800 text-white font-semibold text-xs sm:text-sm border border-surface-600/80 hover:border-primary/60 backdrop-blur-xl shadow-2xl shadow-black/80 hover:scale-105 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            title={`${activeSkip.label} (S)`}
+          >
+            <FastForward className="w-4 h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+            <span>{activeSkip.label}</span>
+            <span className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-800 text-gray-400 border border-surface-700">
+              S
+            </span>
+          </button>
+        </div>
+      )}
+
       <div
         className={`absolute inset-0 flex flex-col justify-between pointer-events-none transition-opacity duration-300 z-20 ${
           showControls || streamError ? 'opacity-100' : 'opacity-0'
@@ -945,6 +1051,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     loading={subtitleLoading}
                     listLoading={subtitleListLoading}
                     error={subtitleError}
+                    offsetSec={subtitleOffsetSec}
+                    onOffsetChange={(delta) =>
+                      setSubtitleOffsetSec((prev) => (delta === 0 ? 0 : Math.round((prev + delta) * 100) / 100))
+                    }
                     onSelect={(track) => {
                       selectSubtitle(track);
                       setOpenMenu(null);

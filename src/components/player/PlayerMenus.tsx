@@ -14,6 +14,8 @@ interface SubtitleMenuProps {
   loading: boolean;
   listLoading: boolean;
   error: string | null;
+  offsetSec: number;
+  onOffsetChange: (delta: number) => void;
   onSelect: (track: SubtitleTrack | null) => void;
 }
 
@@ -23,6 +25,8 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
   loading,
   listLoading,
   error,
+  offsetSec,
+  onOffsetChange,
   onSelect,
 }) => (
   <div role="menu" aria-label="Subtitles" className={`${menuShell} w-72 max-h-[60vh]`}>
@@ -30,6 +34,55 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
       <span>Subtitles</span>
       {loading && <span className="normal-case font-medium text-primary-hover">Loading…</span>}
     </div>
+
+    {/* Subtitle Sync Offset Adjuster */}
+    {activeUrl && (
+      <div className="px-3 py-2 border-b border-surface-800/80 bg-surface-950/40 rounded-xl my-1.5">
+        <div className="flex items-center justify-between text-[11px] font-semibold text-gray-300 mb-1.5">
+          <span>Sync Offset</span>
+          <span className="font-mono text-primary-hover">{offsetSec > 0 ? `+${offsetSec.toFixed(2)}s` : `${offsetSec.toFixed(2)}s`}</span>
+        </div>
+        <div className="flex items-center justify-between gap-1.5">
+          <button
+            type="button"
+            onClick={() => onOffsetChange(-0.5)}
+            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
+          >
+            -0.5s
+          </button>
+          <button
+            type="button"
+            onClick={() => onOffsetChange(-0.25)}
+            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
+          >
+            -0.25s
+          </button>
+          <button
+            type="button"
+            onClick={() => onOffsetChange(0)}
+            disabled={offsetSec === 0}
+            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-400 hover:text-white disabled:opacity-40 transition-colors"
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={() => onOffsetChange(0.25)}
+            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
+          >
+            +0.25s
+          </button>
+          <button
+            type="button"
+            onClick={() => onOffsetChange(0.5)}
+            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
+          >
+            +0.5s
+          </button>
+        </div>
+      </div>
+    )}
+
     {error && <p className="px-3 py-2 text-xs text-red-400">{error}</p>}
     <button
       role="menuitemradio"
