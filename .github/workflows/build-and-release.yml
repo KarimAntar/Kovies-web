@@ -1,12 +1,13 @@
-name: Build desktop applications
+name: Build & Release Applications
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows:
@@ -97,3 +98,45 @@ jobs:
             desktop/release/*.dmg.blockmap
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Kovies-Windows-x64
+          path: dist-release
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Kovies-macOS
+          path: dist-release
+      - name: Prepare release files
+        run: |
+          mkdir -p release-upload
+          # Copy setup and portable Windows executables
+          cp dist-release/*.exe release-upload/ 2>/dev/null || true
+          # Copy macOS DMGs
+          cp dist-release/*.dmg release-upload/ 2>/dev/null || true
+          # Also ensure generic Kovies-0.1.0.dmg exists if only arm64 was generated
+          if [ -f release-upload/Kovies-0.1.0-arm64.dmg ] && [ ! -f release-upload/Kovies-0.1.0.dmg ]; then
+            cp release-upload/Kovies-0.1.0-arm64.dmg release-upload/Kovies-0.1.0.dmg
+          fi
+          ls -lh release-upload
+      - name: Publish or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Kovies Latest' }}
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: release-upload/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
