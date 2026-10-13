@@ -1,21 +1,39 @@
 import React from 'react';
 import type { StreamingProvider } from '../../api/types';
 
+export const FALLBACK_PROVIDERS: StreamingProvider[] = [
+  { id: 8, name: 'Netflix', logo: 'https://image.tmdb.org/t/p/w154/rK1KljqmbvO9HQa1PBFLILWah72.png' },
+  { id: 9, name: 'Amazon Prime Video', logo: 'https://image.tmdb.org/t/p/w154/gMZdpavHmxFNnLpMHwVxfqeux2g.png' },
+  { id: 337, name: 'Disney Plus', logo: 'https://image.tmdb.org/t/p/w154/5eZ872CghnHFLB1j8grszbrx0dx.png' },
+  { id: 350, name: 'Apple TV', logo: 'https://image.tmdb.org/t/p/w154/9icYBfYFcwgCbky5VdGUIKJ4C5i.png' },
+  { id: 15, name: 'Hulu', logo: 'https://image.tmdb.org/t/p/w154/44uAnmSqvA4yBOdbPWN8YgQHjWm.png' },
+  { id: 1825, name: 'HBO Max', logo: 'https://image.tmdb.org/t/p/w154/64fLWeSyZ1KQZhIdvTdy4QHeWty.png' },
+  { id: 2303, name: 'Paramount Plus', logo: 'https://image.tmdb.org/t/p/w154/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png' },
+  { id: 386, name: 'Peacock Premium', logo: 'https://image.tmdb.org/t/p/w154/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png' },
+  { id: 283, name: 'Crunchyroll', logo: 'https://image.tmdb.org/t/p/w154/uFL3c4Cq8M6WoLymlC5Y8bmGytV.png' },
+  { id: 43, name: 'Starz', logo: 'https://image.tmdb.org/t/p/w154/h5D8V197yj9aBEiq79StSVbZfl8.png' },
+  { id: 526, name: 'AMC+', logo: 'https://image.tmdb.org/t/p/w154/wsCUflcmL4dCkzBUaGP8cj1cTkh.png' },
+  { id: 583, name: 'MGM Plus', logo: 'https://image.tmdb.org/t/p/w154/gk7O3l9qHttE9F3hgDNnhbhlOs7.png' },
+  { id: 192, name: 'YouTube', logo: 'https://image.tmdb.org/t/p/w154/5Maob4o5w8oZnNeYpCDyVFD3M7X.png' },
+  { id: 73, name: 'Tubi TV', logo: 'https://image.tmdb.org/t/p/w154/bZVC9qRGqlURv8UGGAZ4e5Fv66g.png' },
+  { id: 300, name: 'Pluto TV', logo: 'https://image.tmdb.org/t/p/w154/5NY25hDExu7319m1z2q2wD499m6.png' },
+];
+
 interface ProviderRowProps {
-  providers: StreamingProvider[];
+  providers?: StreamingProvider[];
   activeId?: number | null;
   onSelect: (provider: StreamingProvider) => void;
 }
 
 /** "Browse by Provider" — horizontally scrolling row of streaming-platform badges. */
 export const ProviderRow: React.FC<ProviderRowProps> = ({ providers, activeId, onSelect }) => {
-  if (!providers || providers.length === 0) return null;
+  const displayProviders = providers && providers.length > 0 ? providers : FALLBACK_PROVIDERS;
 
   return (
     <section aria-label="Browse by Provider" className="w-full px-4 sm:px-8 md:px-12 lg:px-16">
       <h2 className="font-title text-base sm:text-lg font-bold text-white mb-3">Browse by Provider</h2>
       <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
-        {providers.map((provider) => {
+        {displayProviders.map((provider) => {
           const active = provider.id === activeId;
           return (
             <button

@@ -442,11 +442,9 @@ function MainApp() {
             {/* Rails Container */}
             <div className="space-y-2 mt-0 relative z-20">
               {/* Browse by Provider */}
-              {homeData?.providers && homeData.providers.length > 0 && (
-                <div className="pt-4">
-                  <ProviderRow providers={homeData.providers} onSelect={openProvider} />
-                </div>
-              )}
+              <div className="pt-4">
+                <ProviderRow providers={homeData?.providers} onSelect={openProvider} />
+              </div>
 
               {/* Trending — movies and series are separate rails (falls back to the mixed rail on older APIs) */}
               {homeData?.trendingMovies && homeData.trendingMovies.length > 0 ? (
@@ -580,11 +578,9 @@ function MainApp() {
               </div>
             </div>
 
-            {homeData?.providers && (
-              <div className="-mx-4 sm:-mx-8 md:-mx-12 lg:-mx-16 mb-8">
-                <ProviderRow providers={homeData.providers} activeId={activeProvider.id} onSelect={openProvider} />
-              </div>
-            )}
+            <div className="-mx-4 sm:-mx-8 md:-mx-12 lg:-mx-16 mb-8">
+              <ProviderRow providers={homeData?.providers} activeId={activeProvider.id} onSelect={openProvider} />
+            </div>
 
             {isLoadingProvider ? (
               <div className="py-24 flex items-center justify-center gap-2 text-gray-400">
