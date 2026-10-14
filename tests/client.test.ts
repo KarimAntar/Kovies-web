@@ -189,3 +189,30 @@ test('fetchSkipSegments parses and caches TheIntroDB responses', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('api client forwards the page parameter for getPopular, search and getProviderTitles', async () => {
+  const originalFetch = globalThis.fetch;
+  const requested: string[] = [];
+  globalThis.fetch = async (url) => {
+    requested.push(String(url));
+    return new Response(JSON.stringify({ page: 3, results: [], total_pages: 9 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  try {
+    const { api } = await import('../src/api/client.ts');
+    await api.getPopular('movie', 3);
+    await api.search('dune', 3);
+    await api.getProviderTitles(8, 'tv', 3);
+    assert.equal(requested.length, 3);
+    assert.ok(requested[0].includes('catalog/movie/popular?page=3'));
+    assert.ok(requested[1].includes('search?q=dune&page=3'));
+    assert.ok(/discover\/provider\?.*provider_id=8/.test(requested[2]));
+    assert.ok(/discover\/provider\?.*type=tv/.test(requested[2]));
+    assert.ok(/discover\/provider\?.*page=3/.test(requested[2]));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

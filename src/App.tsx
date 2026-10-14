@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Bookmark, Sparkles, Loader2, Film, Tv, Compass, Search, AlertTriangle, History, Flame, Clapperboard, Award } from 'lucide-react';
 import { Navbar, type NavTab } from './components/navbar/Navbar';
 import { HeroSpotlight } from './components/hero/HeroSpotlight';
 import { MediaRail } from './components/rails/MediaRail';
@@ -10,10 +10,12 @@ import { TrailerModal } from './components/modal/TrailerModal';
 import { AuthModal } from './components/modal/AuthModal';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { Titlebar } from './components/Titlebar';
+import { InfiniteSentinel } from './components/InfiniteSentinel';
 import { LandingPage } from './components/landing/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { WatchlistProvider, useWatchlist } from './context/WatchlistContext';
 import { api, errorMessage as apiErrorMessage, isAbortError } from './api/client';
+import { usePagedFeed, hasMorePages, MAX_PAGES, type PageResult } from './hooks/usePagedFeed';
 import { imageUrl, FALLBACK_POSTER } from './lib/images';
 import type {
   MediaItem,
@@ -102,22 +104,36 @@ function MainApp() {
   const [isLoadingHome, setIsLoadingHome] = useState(true);
   const [homeError, setHomeError] = useState<string | null>(null);
 
-  // Tab Catalog Data (for Movies, Shows, Discover)
-  const [tabItems, setTabItems] = useState<MediaItem[]>([]);
+  // Tab Catalog Data (for Movies, Shows, Discover) — infinite-scrolled feed
+  const { feed: tabFeed, reset: resetTabFeed, loadMore: loadMoreTab } = usePagedFeed();
   const [isLoadingTab, setIsLoadingTab] = useState(false);
   const [tabError, setTabError] = useState<string | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
+  const {
+    feed: searchFeed,
+    reset: resetSearchFeed,
+    cancelMore: cancelSearchMore,
+    loadMore: loadMoreSearch,
+  } = usePagedFeed();
+  // Query the displayed search results belong to; load-more always uses this, never the live input.
+  const [searchedQuery, setSearchedQuery] = useState('');
+  const [searchTick, setSearchTick] = useState(0);
+  const immediateSearchRef = useRef(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  // Discover mixes movies and shows; each has its own page counter (page = last loaded page).
+  const discoverPagesRef = useRef({ movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } });
 
   // Browse by Provider (Netflix, Disney+, ...)
   const [activeProvider, setActiveProvider] = useState<StreamingProvider | null>(null);
   const [providerType, setProviderType] = useState<'movie' | 'tv'>('movie');
-  const [providerItems, setProviderItems] = useState<MediaItem[]>([]);
-  const [providerPage, setProviderPage] = useState(1);
-  const [providerTotalPages, setProviderTotalPages] = useState(1);
+  const {
+    feed: providerFeed,
+    reset: resetProviderFeed,
+    cancelMore: cancelProviderMore,
+    loadMore: loadMoreProviderPage,
+  } = usePagedFeed();
   const [isLoadingProvider, setIsLoadingProvider] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerReload, setProviderReload] = useState(0);
@@ -161,17 +177,19 @@ function MainApp() {
 
   // Load first page of titles whenever the provider or movie/show toggle changes
   useEffect(() => {
-    if (activeTab !== 'provider' || !activeProvider) return;
+    if (activeTab !== 'provider' || !activeProvider) {
+      cancelProviderMore();
+      return;
+    }
     const controller = new AbortController();
     setIsLoadingProvider(true);
     setProviderError(null);
-    setProviderItems([]);
-    setProviderPage(1);
+    resetProviderFeed();
     api
       .getProviderTitles(activeProvider.id, providerType, 1, controller.signal)
       .then((res) => {
-        setProviderItems(res.results || []);
-        setProviderTotalPages(res.total_pages || 1);
+        if (controller.signal.aborted) return;
+        resetProviderFeed({ items: res.results || [], totalPages: res.total_pages || 1 });
       })
       .catch((err) => {
         if (!controller.signal.aborted) setProviderError(apiErrorMessage(err, 'Could not load this provider.'));
@@ -180,27 +198,13 @@ function MainApp() {
         if (!controller.signal.aborted) setIsLoadingProvider(false);
       });
     return () => controller.abort();
-  }, [activeTab, activeProvider, providerType, providerReload]);
+  }, [activeTab, activeProvider, providerType, providerReload, resetProviderFeed, cancelProviderMore]);
 
-  const [isLoadingMoreProvider, setIsLoadingMoreProvider] = useState(false);
-  const loadMoreProvider = useCallback(async () => {
-    if (!activeProvider || isLoadingMoreProvider) return;
-    const next = providerPage + 1;
-    setIsLoadingMoreProvider(true);
-    try {
-      const res = await api.getProviderTitles(activeProvider.id, providerType, next);
-      setProviderItems((prev) => {
-        const seen = new Set(prev.map((m) => m.id || m.tmdbId));
-        return [...prev, ...(res.results || []).filter((m) => !seen.has(m.id || m.tmdbId))];
-      });
-      setProviderPage(next);
-      setProviderTotalPages(res.total_pages || providerTotalPages);
-    } catch (err) {
-      setProviderError(apiErrorMessage(err, 'Could not load more titles.'));
-    } finally {
-      setIsLoadingMoreProvider(false);
-    }
-  }, [activeProvider, isLoadingMoreProvider, providerPage, providerType, providerTotalPages]);
+  const loadMoreProvider = useCallback(() => {
+    if (!activeProvider) return;
+    const providerId = activeProvider.id;
+    void loadMoreProviderPage((page, signal) => api.getProviderTitles(providerId, providerType, page, signal));
+  }, [activeProvider, providerType, loadMoreProviderPage]);
 
   const openProvider = useCallback((provider: StreamingProvider) => {
     setActiveProvider(provider);
@@ -209,16 +213,52 @@ function MainApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Load Movies or Shows Tab Data
+  // One Discover step: fetches the next page of every side (movies / shows) that still has pages.
+  // Partial failures keep the side's counter so it is retried on the next load.
+  const loadDiscoverPage = useCallback(async (nextPage: number, signal: AbortSignal): Promise<PageResult> => {
+    const sides = (['movie', 'tv'] as const).filter((t) => {
+      const p = discoverPagesRef.current[t];
+      return p.page < Math.min(MAX_PAGES, p.total);
+    });
+    const settled = await Promise.allSettled(
+      sides.map((t) => api.getPopular(t, discoverPagesRef.current[t].page + 1, signal))
+    );
+    if (signal.aborted) return { results: [] };
+    const pages = { ...discoverPagesRef.current };
+    const results: MediaItem[] = [];
+    let failures = 0;
+    let firstError: unknown;
+    settled.forEach((r, i) => {
+      const t = sides[i];
+      if (r.status === 'fulfilled') {
+        results.push(...(r.value.results || []));
+        pages[t] = { page: pages[t].page + 1, total: r.value.total_pages || pages[t].total };
+      } else {
+        failures += 1;
+        firstError ??= r.reason;
+      }
+    });
+    if (sides.length > 0 && failures === sides.length) throw firstError;
+    discoverPagesRef.current = pages;
+    const more = (['movie', 'tv'] as const).some((t) => pages[t].page < Math.min(MAX_PAGES, pages[t].total));
+    // The feed tracks one counter, so report "one more page" while either side has pages left.
+    return { results, total_pages: more ? nextPage + 1 : nextPage };
+  }, []);
+
+  // Load first page of Movies, Shows or Discover
   useEffect(() => {
     if (activeTab === 'movies' || activeTab === 'shows') {
       const type = activeTab === 'movies' ? 'movie' : 'tv';
       const controller = new AbortController();
       setIsLoadingTab(true);
       setTabError(null);
+      resetTabFeed();
       api
         .getPopular(type, 1, controller.signal)
-        .then((res) => setTabItems(res.results || []))
+        .then((res) => {
+          if (controller.signal.aborted) return;
+          resetTabFeed({ items: res.results || [], totalPages: res.total_pages || 1 });
+        })
         .catch((err) => {
           if (!controller.signal.aborted) setTabError(apiErrorMessage(err, 'Could not load this catalogue.'));
         })
@@ -228,87 +268,93 @@ function MainApp() {
       return () => controller.abort();
     }
     if (activeTab === 'discover') {
+      const controller = new AbortController();
       setIsLoadingTab(true);
       setTabError(null);
+      resetTabFeed();
+      discoverPagesRef.current = { movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } };
       // Mix popular movies and shows.
-      Promise.allSettled([api.getPopular('movie', 1), api.getPopular('tv', 1)])
-        .then(([moviesRes, tvRes]) => {
-          const movies = moviesRes.status === 'fulfilled' ? moviesRes.value.results : [];
-          const shows = tvRes.status === 'fulfilled' ? tvRes.value.results : [];
-          if (movies.length === 0 && shows.length === 0) {
-            const failed = moviesRes.status === 'rejected' ? moviesRes.reason : tvRes.status === 'rejected' ? tvRes.reason : undefined;
-            setTabError(apiErrorMessage(failed, 'Could not load the Discover catalogue.'));
-          }
-          setTabItems([...movies, ...shows]);
+      loadDiscoverPage(1, controller.signal)
+        .then((res) => {
+          if (controller.signal.aborted) return;
+          resetTabFeed({ items: res.results || [], totalPages: res.total_pages || 1 });
         })
-        .finally(() => setIsLoadingTab(false));
+        .catch((err) => {
+          if (!controller.signal.aborted) setTabError(apiErrorMessage(err, 'Could not load the Discover catalogue.'));
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsLoadingTab(false);
+        });
+      return () => controller.abort();
     }
-    else {
-      setIsLoadingTab(false);
-      setTabError(null);
-      setTabItems([]);
-    }
-  }, [activeTab, reloadTick]);
+    setIsLoadingTab(false);
+    setTabError(null);
+    resetTabFeed();
+  }, [activeTab, reloadTick, resetTabFeed, loadDiscoverPage]);
 
-  // Search page results (the navbar box is the quick-access variant).
+  const loadMoreTabItems = useCallback(() => {
+    if (activeTab === 'discover') {
+      void loadMoreTab(loadDiscoverPage);
+    } else if (activeTab === 'movies' || activeTab === 'shows') {
+      const type = activeTab === 'movies' ? 'movie' : 'tv';
+      void loadMoreTab((page, signal) => api.getPopular(type, page, signal));
+    }
+  }, [activeTab, loadMoreTab, loadDiscoverPage]);
+
+  // Search page results (the navbar box is the quick-access variant). Typing is debounced;
+  // an explicit submit (Enter) bumps searchTick and runs through this same path without the delay.
   useEffect(() => {
+    // A new query (or leaving the tab) invalidates any in-flight load-more for the previous one.
+    cancelSearchMore();
     if (activeTab !== 'search') return;
     const trimmed = searchQuery.trim();
     if (!trimmed) {
-      setSearchResults([]);
+      resetSearchFeed();
+      setSearchedQuery('');
       setIsSearching(false);
       return;
     }
+    const delay = immediateSearchRef.current ? 0 : 300;
+    immediateSearchRef.current = false;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setIsSearching(true);
+      setTabError(null);
       api
         .search(trimmed, 1, controller.signal)
         .then((res) => {
-          if (!controller.signal.aborted) setSearchResults(res.results || []);
+          if (controller.signal.aborted) return;
+          resetSearchFeed({ items: res.results || [], totalPages: res.total_pages ?? res.totalPages ?? 1 });
+          setSearchedQuery(trimmed);
         })
         .catch((err) => {
           if (!controller.signal.aborted && !isAbort(err)) {
-            setSearchResults([]);
+            resetSearchFeed();
+            setSearchedQuery(trimmed);
             setTabError(apiErrorMessage(err, 'Search failed.'));
           }
         })
         .finally(() => {
           if (!controller.signal.aborted) setIsSearching(false);
         });
-    }, 300);
+    }, delay);
     return () => {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, searchTick, resetSearchFeed, cancelSearchMore]);
+
+  const loadMoreSearchPage = useCallback(() => {
+    if (!searchedQuery) return;
+    void loadMoreSearch((page, signal) => api.search(searchedQuery, page, signal));
+  }, [searchedQuery, loadMoreSearch]);
 
   const handleSearchSubmit = useCallback((q: string) => {
-    const trimmed = q.trim();
+    immediateSearchRef.current = true;
     setSearchQuery(q);
+    setSearchTick((n) => n + 1);
     setActiveTab('search');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (!trimmed) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-    setIsSearching(true);
-    setTabError(null);
-    api
-      .search(trimmed, 1)
-      .then((res) => {
-        setSearchResults(res.results || []);
-      })
-      .catch((err) => {
-        if (!isAbort(err)) {
-          setSearchResults([]);
-          setTabError(apiErrorMessage(err, 'Search failed.'));
-        }
-      })
-      .finally(() => {
-        setIsSearching(false);
-      });
   }, []);
 
   // Handle Play Action
@@ -371,10 +417,20 @@ function MainApp() {
   // Filter tab items by genre if applicable
   const filteredTabItems =
     selectedGenre === 'all'
-      ? tabItems
-      : tabItems.filter((i) =>
+      ? tabFeed.items
+      : tabFeed.items.filter((i) =>
           i.genres?.some((g) => g.name.toLowerCase() === selectedGenre.toLowerCase())
         );
+
+  const tabHasMore = hasMorePages(tabFeed);
+  const tabSentinel = (
+    <InfiniteSentinel
+      hasMore={tabHasMore}
+      loading={tabFeed.loadingMore}
+      error={tabFeed.error}
+      onLoadMore={loadMoreTabItems}
+    />
+  );
 
   const GENRES = [
     'all',
@@ -587,14 +643,14 @@ function MainApp() {
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 <span>Loading {activeProvider.name}...</span>
               </div>
-            ) : providerError && providerItems.length === 0 ? (
+            ) : providerError && providerFeed.items.length === 0 ? (
               <TabError message={providerError} onRetry={() => setProviderReload((n) => n + 1)} />
-            ) : providerItems.length === 0 ? (
+            ) : providerFeed.items.length === 0 ? (
               <EmptyGrid message={`No ${providerType === 'movie' ? 'movies' : 'series'} found on ${activeProvider.name}.`} />
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                  {providerItems.map((item) => (
+                  {providerFeed.items.map((item) => (
                     <MediaCard
                       key={`provider-${providerType}-${item.id || item.tmdbId}`}
                       item={item}
@@ -603,19 +659,12 @@ function MainApp() {
                     />
                   ))}
                 </div>
-                {providerPage < providerTotalPages && (
-                  <div className="flex justify-center mt-10">
-                    <button
-                      onClick={loadMoreProvider}
-                      disabled={isLoadingMoreProvider}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-surface-800 hover:bg-surface-700 border border-white/10 text-white text-sm font-semibold transition-colors disabled:opacity-60"
-                    >
-                      {isLoadingMoreProvider ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
-                      {isLoadingMoreProvider ? 'Loading...' : 'Load more'}
-                    </button>
-                  </div>
-                )}
-                {providerError && <p className="mt-4 text-center text-sm text-amber-400">{providerError}</p>}
+                <InfiniteSentinel
+                  hasMore={hasMorePages(providerFeed)}
+                  loading={providerFeed.loadingMore}
+                  error={providerFeed.error}
+                  onLoadMore={loadMoreProvider}
+                />
               </>
             )}
           </div>
@@ -643,19 +692,22 @@ function MainApp() {
               </div>
             ) : tabError ? (
               <TabError message={tabError} onRetry={() => setReloadTick((n) => n + 1)} />
-            ) : tabItems.length === 0 ? (
+            ) : tabFeed.items.length === 0 ? (
               <EmptyGrid message="No movies to show right now." />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {tabItems.map((item) => (
-                  <MediaCard
-                    key={`movie-${item.id || item.tmdbId}`}
-                    item={item}
-                    onSelect={(it) => setSelectedMedia(it)}
-                    onPlay={(it) => handlePlayMedia(it)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {tabFeed.items.map((item) => (
+                    <MediaCard
+                      key={`movie-${item.id || item.tmdbId}`}
+                      item={item}
+                      onSelect={(it) => setSelectedMedia(it)}
+                      onPlay={(it) => handlePlayMedia(it)}
+                    />
+                  ))}
+                </div>
+                {tabSentinel}
+              </>
             )}
           </div>
         )}
@@ -682,19 +734,22 @@ function MainApp() {
               </div>
             ) : tabError ? (
               <TabError message={tabError} onRetry={() => setReloadTick((n) => n + 1)} />
-            ) : tabItems.length === 0 ? (
+            ) : tabFeed.items.length === 0 ? (
               <EmptyGrid message="No shows to show right now." />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {tabItems.map((item) => (
-                  <MediaCard
-                    key={`tv-${item.id || item.tmdbId}`}
-                    item={item}
-                    onSelect={(it) => setSelectedMedia(it)}
-                    onPlay={(it) => handlePlayMedia(it)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {tabFeed.items.map((item) => (
+                    <MediaCard
+                      key={`tv-${item.id || item.tmdbId}`}
+                      item={item}
+                      onSelect={(it) => setSelectedMedia(it)}
+                      onPlay={(it) => handlePlayMedia(it)}
+                    />
+                  ))}
+                </div>
+                {tabSentinel}
+              </>
             )}
           </div>
         )}
@@ -805,23 +860,28 @@ function MainApp() {
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 <span>Discovering titles...</span>
               </div>
-            ) : tabError && tabItems.length === 0 ? (
+            ) : tabError && tabFeed.items.length === 0 ? (
               <TabError message={tabError} onRetry={() => setReloadTick((n) => n + 1)} />
-            ) : tabItems.length === 0 ? (
+            ) : tabFeed.items.length === 0 ? (
               <EmptyGrid message="Nothing to discover right now." />
-            ) : filteredTabItems.length === 0 ? (
-              <EmptyGrid message={`No titles in ${selectedGenre} yet.`} />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {filteredTabItems.map((item) => (
-                  <MediaCard
-                    key={`discover-${item.id || item.tmdbId}`}
-                    item={item}
-                    onSelect={(it) => setSelectedMedia(it)}
-                    onPlay={(it) => handlePlayMedia(it)}
-                  />
-                ))}
-              </div>
+              <>
+                {filteredTabItems.length === 0 && !tabHasMore && (
+                  <EmptyGrid message={`No titles in ${selectedGenre} yet.`} />
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {filteredTabItems.map((item) => (
+                    <MediaCard
+                      key={`discover-${item.type ?? item.media_type}-${item.id || item.tmdbId}`}
+                      item={item}
+                      onSelect={(it) => setSelectedMedia(it)}
+                      onPlay={(it) => handlePlayMedia(it)}
+                    />
+                  ))}
+                </div>
+                {/* Genre filtering is client-side: the sentinel keeps loading while the filtered grid is short. */}
+                {tabSentinel}
+              </>
             )}
           </div>
         )}
@@ -862,19 +922,30 @@ function MainApp() {
               </div>
             ) : tabError ? (
               <TabError message={tabError} />
-            ) : searchResults.length === 0 ? (
+            ) : searchFeed.items.length === 0 ? (
               <EmptyGrid message={`No titles found matching \u201c${searchQuery.trim()}\u201d.`} />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {searchResults.map((item) => (
-                  <MediaCard
-                    key={`search-${item.id || item.tmdbId}`}
-                    item={item}
-                    onSelect={(it) => setSelectedMedia(it)}
-                    onPlay={(it) => handlePlayMedia(it)}
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {searchFeed.items.map((item) => (
+                    <MediaCard
+                      key={`search-${item.id || item.tmdbId}`}
+                      item={item}
+                      onSelect={(it) => setSelectedMedia(it)}
+                      onPlay={(it) => handlePlayMedia(it)}
+                    />
+                  ))}
+                </div>
+                {/* Only page the query these results belong to; while the input has moved on, a new search is pending. */}
+                {searchedQuery === searchQuery.trim() && (
+                  <InfiniteSentinel
+                    hasMore={hasMorePages(searchFeed)}
+                    loading={searchFeed.loadingMore}
+                    error={searchFeed.error}
+                    onLoadMore={loadMoreSearchPage}
                   />
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
