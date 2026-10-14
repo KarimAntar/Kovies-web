@@ -20,7 +20,7 @@ export interface PlatformDownloads {
 const FALLBACK_DOWNLOADS: PlatformDownloads = {
   tag: 'v0.1.0',
   windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.1.0-x64.exe',
-  windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0-portable.exe',
+  windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0-x64-portable.exe',
   macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0-arm64.dmg',
   macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0.dmg',
   androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v0.9.1.apk',
