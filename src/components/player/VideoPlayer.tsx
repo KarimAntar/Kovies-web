@@ -168,7 +168,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const controller = new AbortController();
-    fetchSkipSegments(tmdbId, mediaType, season, episode, controller.signal)
+    // introdb.app needs the IMDb id; list cards often lack it, so read it from details.
+    const resolveImdbId = async (): Promise<string | undefined> => {
+      if (media.imdbId) return media.imdbId;
+      try {
+        const details = mediaType === 'tv'
+          ? await api.getTVDetails(tmdbId, controller.signal)
+          : await api.getMovieDetails(tmdbId, controller.signal);
+        return details.imdbId ?? undefined;
+      } catch {
+        return undefined;
+      }
+    };
+    resolveImdbId()
+      .then((imdbId) => fetchSkipSegments(tmdbId, mediaType, season, episode, controller.signal, imdbId))
       .then((segments) => {
         if (!controller.signal.aborted) {
           setSkipSegments(segments);
@@ -180,7 +193,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       });
     return () => controller.abort();
-  }, [tmdbId, mediaType, season, episode]);
+  }, [tmdbId, mediaType, season, episode, media.imdbId]);
 
   // ---------------------------------------------------------------------------
   // Load sources + subtitle list (cancelled when the title/episode changes)

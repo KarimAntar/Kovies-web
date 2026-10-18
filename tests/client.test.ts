@@ -216,3 +216,71 @@ test('api client forwards the page parameter for getPopular, search and getProvi
     globalThis.fetch = originalFetch;
   }
 });
+
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+test('fetchSkipSegments treats a null TheIntroDB start as the beginning of the video', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => jsonResponse({ tmdb_id: 27205, intro: [{ start_ms: null, end_ms: 38000 }] });
+  try {
+    const segments = await fetchSkipSegments(27205, 'movie');
+    assert.equal(segments?.intro?.startSec, 0);
+    assert.equal(segments?.intro?.endSec, 38);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetchSkipSegments falls back to introdb.app when TheIntroDB has no data', async () => {
+  const originalFetch = globalThis.fetch;
+  const requested: string[] = [];
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    requested.push(u);
+    if (u.includes('theintrodb.org')) return jsonResponse({ error: 'media not found' }, 404);
+    return jsonResponse({
+      intro: { start_ms: 60000, end_ms: 150000, confidence: 0.9 },
+      recap: null,
+      outro: { start_ms: 1300000, end_ms: null, confidence: 0.8 },
+    });
+  };
+  try {
+    const segments = await fetchSkipSegments(123542, 'tv', 1, 1, undefined, 'tt14976292');
+    assert.equal(segments?.intro?.startSec, 60);
+    assert.equal(segments?.intro?.endSec, 150);
+    assert.equal(segments?.credits?.startSec, 1300);
+    assert.equal(segments?.credits?.endSec, Infinity);
+    assert.ok(requested.some((u) => u.includes('api.introdb.app/segments') && u.includes('imdb_id=tt14976292') && u.includes('season=1') && u.includes('episode=1')));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetchSkipSegments prefers TheIntroDB and fills gaps from introdb.app', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('theintrodb.org')) return jsonResponse({ intro: [{ start_ms: 10000, end_ms: 40000 }] });
+    return jsonResponse({ intro: { start_ms: 99000, end_ms: 120000 }, recap: { start_ms: 0, end_ms: 5000 }, outro: null });
+  };
+  try {
+    const segments = await fetchSkipSegments(500, 'movie', undefined, undefined, undefined, 'tt0000500');
+    assert.equal(segments?.intro?.startSec, 10);
+    assert.equal(segments?.recap?.endSec, 5);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetchSkipSegments treats an introdb.app rate limit as no data', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) =>
+    String(url).includes('theintrodb.org')
+      ? jsonResponse({ error: 'media not found' }, 404)
+      : jsonResponse({ error: 'rate limited' }, 429);
+  try {
+    assert.equal(await fetchSkipSegments(501, 'movie', undefined, undefined, undefined, 'tt0000501'), null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -8,6 +8,8 @@ export interface Genre {
 export interface MediaItem {
   id: number;
   tmdbId: number;
+  /** Present on details payloads; list cards usually omit it. */
+  imdbId?: string;
   type: MediaType;
   media_type?: MediaType;
   title: string;

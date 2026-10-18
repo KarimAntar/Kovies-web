@@ -1,13 +1,11 @@
 /**
- * TheIntroDB client (theintrodb.org / introdb.app).
+ * Skip-segment lookup from two community databases:
+ * - TheIntroDB (api.theintrodb.org/v3, keyed by TMDB id)
+ * - introdb.app (api.introdb.app, keyed by IMDb id)
  *
- * Provides exact timestamps for skipping:
- * - Intros / Title sequences
- * - Recaps ("Previously on...")
- * - Credits / Outros
- * - Previews
- *
- * Free API: https://api.theintrodb.org/v3
+ * Both are queried in parallel. For each segment kind TheIntroDB wins when it
+ * has data; introdb.app fills the gaps. A failed or rate-limited source counts
+ * as "no data".
  */
 
 export interface SegmentTime {
@@ -23,87 +21,118 @@ export interface SkipSegments {
 }
 
 interface RawSegment {
-  start_ms: number;
+  start_ms: number | null;
   end_ms: number | null;
 }
 
 interface TheIntroDbResponse {
-  tmdb_id?: number;
-  type?: string;
-  season?: number;
-  episode?: number;
   intro?: RawSegment[];
   recap?: RawSegment[];
   credits?: RawSegment[];
   preview?: RawSegment[];
 }
 
+interface IntroDbAppResponse {
+  intro?: RawSegment | null;
+  recap?: RawSegment | null;
+  outro?: RawSegment | null;
+}
+
 const memoryCache = new Map<string, SkipSegments | null>();
 
+/** A null start means "from the beginning"; a null end means "until the end". */
+const toSegment = (raw?: RawSegment | null): SegmentTime | undefined => {
+  if (!raw) return undefined;
+  const hasStart = typeof raw.start_ms === 'number';
+  const hasEnd = typeof raw.end_ms === 'number';
+  if (!hasStart && !hasEnd) return undefined;
+  return {
+    startSec: hasStart ? Math.max(0, raw.start_ms as number) / 1000 : 0,
+    endSec: hasEnd ? (raw.end_ms as number) / 1000 : Infinity,
+  };
+};
+
+async function getJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
+  try {
+    const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' }, signal });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTheIntroDb(
+  tmdbId: number,
+  mediaType: 'movie' | 'tv',
+  season?: number,
+  episode?: number,
+  signal?: AbortSignal
+): Promise<SkipSegments> {
+  const params = new URLSearchParams({ tmdb_id: String(tmdbId) });
+  if (mediaType === 'tv') {
+    params.set('season', String(season ?? 1));
+    params.set('episode', String(episode ?? 1));
+  }
+  const data = await getJson<TheIntroDbResponse>(`https://api.theintrodb.org/v3/media?${params}`, signal);
+  if (!data) return {};
+  return {
+    intro: toSegment(data.intro?.[0]),
+    recap: toSegment(data.recap?.[0]),
+    credits: toSegment(data.credits?.[0]),
+    preview: toSegment(data.preview?.[0]),
+  };
+}
+
+async function fetchIntroDbApp(
+  imdbId: string,
+  mediaType: 'movie' | 'tv',
+  season?: number,
+  episode?: number,
+  signal?: AbortSignal
+): Promise<SkipSegments> {
+  const params = new URLSearchParams({ imdb_id: imdbId });
+  if (mediaType === 'tv') {
+    params.set('season', String(season ?? 1));
+    params.set('episode', String(episode ?? 1));
+  } else {
+    params.set('is_movie', 'true');
+  }
+  const data = await getJson<IntroDbAppResponse>(`https://api.introdb.app/segments?${params}`, signal);
+  if (!data) return {};
+  return { intro: toSegment(data.intro), recap: toSegment(data.recap), credits: toSegment(data.outro) };
+}
+
 /**
- * Fetch skip segments for an episode or movie from TheIntroDB.
- * Returns null if no segments are found or request fails.
+ * Fetch skip segments for an episode or movie.
+ * Returns null when neither source has any segment.
  */
 export async function fetchSkipSegments(
   tmdbId: number,
   mediaType: 'movie' | 'tv',
   season?: number,
   episode?: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  imdbId?: string | null
 ): Promise<SkipSegments | null> {
   if (!tmdbId || tmdbId <= 0) return null;
+  const imdb = imdbId && /^tt\d+$/.test(imdbId) ? imdbId : undefined;
 
-  const cacheKey = `${mediaType}:${tmdbId}:${season ?? ''}:${episode ?? ''}`;
-  if (memoryCache.has(cacheKey)) {
-    return memoryCache.get(cacheKey) ?? null;
+  const cacheKey = `${mediaType}:${tmdbId}:${imdb ?? ''}:${season ?? ''}:${episode ?? ''}`;
+  if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey) ?? null;
+
+  const [primary, secondary] = await Promise.all([
+    fetchTheIntroDb(tmdbId, mediaType, season, episode, signal),
+    imdb ? fetchIntroDbApp(imdb, mediaType, season, episode, signal) : Promise.resolve<SkipSegments>({}),
+  ]);
+  if (signal?.aborted) return null;
+
+  const merged: SkipSegments = {};
+  for (const kind of ['intro', 'recap', 'credits', 'preview'] as const) {
+    const segment = primary[kind] ?? secondary[kind];
+    if (segment) merged[kind] = segment;
   }
 
-  try {
-    const params = new URLSearchParams({
-      tmdb_id: String(tmdbId),
-    });
-
-    if (mediaType === 'tv') {
-      params.set('season', String(season ?? 1));
-      params.set('episode', String(episode ?? 1));
-    }
-
-    const url = `https://api.theintrodb.org/v3/media?${params.toString()}`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
-      signal,
-    });
-
-    if (!res.ok) {
-      memoryCache.set(cacheKey, null);
-      return null;
-    }
-
-    const data: TheIntroDbResponse = await res.json();
-    const segments: SkipSegments = {};
-
-    const toSegment = (arr?: RawSegment[]): SegmentTime | undefined => {
-      if (!arr || arr.length === 0) return undefined;
-      const first = arr[0];
-      if (typeof first.start_ms !== 'number') return undefined;
-      const startSec = first.start_ms / 1000;
-      const endSec = typeof first.end_ms === 'number' ? first.end_ms / 1000 : Infinity;
-      return { startSec, endSec };
-    };
-
-    if (data.intro) segments.intro = toSegment(data.intro);
-    if (data.recap) segments.recap = toSegment(data.recap);
-    if (data.credits) segments.credits = toSegment(data.credits);
-    if (data.preview) segments.preview = toSegment(data.preview);
-
-    const hasAny = Boolean(segments.intro || segments.recap || segments.credits || segments.preview);
-    const result = hasAny ? segments : null;
-    memoryCache.set(cacheKey, result);
-    return result;
-  } catch {
-    return null;
-  }
+  const result = Object.keys(merged).length > 0 ? merged : null;
+  memoryCache.set(cacheKey, result);
+  return result;
 }
