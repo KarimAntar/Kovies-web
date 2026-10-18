@@ -21,6 +21,7 @@ import type {
 } from '../../api/types';
 import { firstImage, FALLBACK_POSTER, FALLBACK_BACKDROP } from '../../lib/images';
 import { api } from '../../api/client';
+import { prefetchSources } from '../../lib/sourceCache';
 import { useWatchlist } from '../../context/WatchlistContext';
 
 interface DetailsModalProps {
@@ -44,9 +45,6 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
-  const [sources, setSources] = useState<StreamingSource[]>([]);
-  const [loadingSources, setLoadingSources] = useState(false);
-  const [selectedSource, setSelectedSource] = useState<StreamingSource | null>(null);
 
   const tmdbId = media?.tmdbId || media?.id;
   const mediaType = media?.type || media?.media_type || 'movie';
@@ -59,8 +57,6 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
     let isCurrent = true;
     setIsLoading(true);
     setDetails(null);
-    setSources([]);
-    setSelectedSource(null);
 
     const fetchDetails =
       mediaType === 'movie'
@@ -86,25 +82,8 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
         if (isCurrent) setIsLoading(false);
       });
 
-    // If movie, also fetch available stream sources immediately
-    if (mediaType === 'movie') {
-      setLoadingSources(true);
-      api
-        .getMovieSources(tmdbId)
-        .then((res) => {
-          if (!isCurrent) return;
-          setSources(res.sources || []);
-          if (res.sources && res.sources.length > 0) {
-            setSelectedSource(res.sources[0]);
-          }
-        })
-        .catch((err) => {
-          console.warn('Sources preview unavailable:', err.message);
-        })
-        .finally(() => {
-          if (isCurrent) setLoadingSources(false);
-        });
-    }
+    // Prefetch the movie stream so Play starts immediately (the player reuses this request).
+    if (mediaType === 'movie') prefetchSources(tmdbId, 'movie');
 
     return () => {
       isCurrent = false;
@@ -139,6 +118,13 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
       isCurrent = false;
     };
   }, [isOpen, tmdbId, mediaType, selectedSeason]);
+
+  // Prefetch the episode the main button starts (resume point, else S1:E1); repeat calls hit the cache.
+  useEffect(() => {
+    if (!isOpen || mediaType !== 'tv' || !tmdbId) return;
+    const progress = latestProgressFor(tmdbId, 'tv');
+    prefetchSources(tmdbId, 'tv', progress?.seasonNumber ?? 1, progress?.episodeNumber ?? 1);
+  }, [isOpen, tmdbId, mediaType, latestProgressFor]);
 
   // Keyboard escape
   useEffect(() => {
@@ -175,16 +161,18 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
   const rating = currentMedia.rating || currentMedia.vote_average;
 
   const handlePlayMovie = () => {
-    onPlay(currentMedia, undefined, undefined, selectedSource || undefined);
+    onPlay(currentMedia);
     onClose();
   };
 
-  const handlePlayEpisode = (episodeNum: number) => {
-    onPlay(currentMedia, selectedSeason, episodeNum);
+  const handlePlayEpisode = (episodeNum: number, season: number = selectedSeason) => {
+    onPlay(currentMedia, season, episodeNum);
     onClose();
   };
 
   const currentHistory = tmdbId ? latestProgressFor(tmdbId, mediaType) : undefined;
+  const resumeSeason = currentHistory?.seasonNumber ?? undefined;
+  const resumeEpisode = currentHistory?.episodeNumber ?? undefined;
   const handleRemoveHistory = () => {
     if (!tmdbId) return;
     void removeFromHistory(
@@ -317,11 +305,19 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                 </button>
               ) : (
                 <button
-                  onClick={() => handlePlayEpisode(1)}
+                  onClick={() =>
+                    resumeSeason && resumeEpisode
+                      ? handlePlayEpisode(resumeEpisode, resumeSeason)
+                      : handlePlayEpisode(1)
+                  }
                   className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-7 py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg shadow-primary/30 transition-all hover:scale-102"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>Start Series (S1:E1)</span>
+                  <span>
+                    {resumeSeason && resumeEpisode
+                      ? `Resume S${resumeSeason}:E${resumeEpisode}`
+                      : 'Start Series (S1:E1)'}
+                  </span>
                 </button>
               )}
 
@@ -381,61 +377,6 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                 </div>
               )}
             </div>
-
-            {/* Stream Sources Picker (If Movie) */}
-            {mediaType === 'movie' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-title text-base sm:text-lg font-bold text-white">
-                    Streaming Stream Options
-                  </h3>
-                  {loadingSources && (
-                    <span className="text-xs text-gray-400 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                      Resolving high-speed mirrors...
-                    </span>
-                  )}
-                </div>
-
-                {sources.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {sources.map((src, i) => {
-                      const isSelected = selectedSource?.url === src.url;
-                      return (
-                        <button
-                          key={`${src.provider}-${src.quality}-${i}`}
-                          onClick={() => setSelectedSource(src)}
-                          className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
-                            isSelected
-                              ? 'bg-primary/20 border-primary text-white shadow-md shadow-primary/20'
-                              : 'bg-surface-800/80 border-surface-700/80 hover:bg-surface-750 text-gray-300'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="uppercase text-xs font-extrabold px-2 py-0.5 rounded bg-surface-900 border border-surface-700 text-primary-hover">
-                                {src.quality || 'HD'}
-                              </span>
-                              <span className="text-xs text-gray-300 font-medium capitalize">
-                                {src.server || src.provider}
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-gray-500 block mt-1">
-                              Adaptive HLS Stream
-                            </span>
-                          </div>
-                          {isSelected && <Check className="w-4 h-4 text-primary" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : !loadingSources ? (
-                  <div className="p-4 rounded-2xl bg-surface-800/50 border border-surface-700/50 text-xs text-gray-400">
-                    Adaptive 4K / 1080p stream will be dynamically resolved when playback begins.
-                  </div>
-                ) : null}
-              </div>
-            )}
 
             {/* Cast Carousel */}
             {details?.cast && details.cast.length > 0 && (

@@ -23,6 +23,7 @@ import { createVttBlobUrl, srtToVtt } from '../../lib/srtToVtt';
 import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../../lib/playback';
 import { parseVtt, activeCues, type VttCue } from '../../lib/vtt';
 import { fetchSkipSegments, type SkipSegments } from '../../lib/introdb';
+import { loadSources } from '../../lib/sourceCache';
 import { groupSubtitles, playableSubtitles } from '../../lib/subtitles';
 import { desktop, isDesktop } from '../../platform';
 import { useWatchlist } from '../../context/WatchlistContext';
@@ -221,11 +222,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setSourcesLoading(true);
     setStreamError(null);
 
+    // Reuses the lookup the details modal prefetched (finished or still in flight); ranked best quality first.
     const sourcesPromise = initialSource
       ? Promise.resolve({ sources: [initialSource] })
-      : isTv
-        ? api.getTVEpisodeSources(tmdbId, season ?? 1, episode ?? 1, signal)
-        : api.getMovieSources(tmdbId, signal);
+      : loadSources(tmdbId, isTv ? 'tv' : 'movie', season, episode);
 
     sourcesPromise
       .then((res) => {

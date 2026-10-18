@@ -559,7 +559,11 @@ function MainApp() {
                     rating: undefined,
                   }))}
                   historyItems={continueWatching}
-                  onSelect={(item) => setSelectedMedia(item)}
+                  // Continue goes straight into the player at the saved episode/position.
+                  onSelect={(item) => {
+                    const h = continueWatching.find((c) => c.tmdbId === item.tmdbId && c.mediaType === item.type);
+                    handlePlayMedia(item, h?.seasonNumber ?? undefined, h?.episodeNumber ?? undefined);
+                  }}
                   onPlay={(item, s, ep) => handlePlayMedia(item, s, ep)}
                   onRemoveHistory={(_item, history) => {
                     void removeFromHistory(
