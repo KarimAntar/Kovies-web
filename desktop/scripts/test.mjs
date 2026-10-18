@@ -128,6 +128,23 @@ test('CORS headers allow app origin for trusted hosts', async () => {
   assert.deepEqual(response.responseHeaders['Access-Control-Allow-Origin'], ['app://kovies']);
 });
 
+test('CORS allows the app origin for the introdb.app skip-segment API only', async () => {
+  const hooks = {};
+  const network = await load('main/network.ts');
+  const store = new stream.StreamHeaderStore();
+  network.installNetworkHooks({ webRequest: {
+    onBeforeSendHeaders: () => {},
+    onHeadersReceived: (...args) => { hooks.onHeadersReceived = args.at(-1); },
+  } }, store);
+  const run = (url) => {
+    let response;
+    hooks.onHeadersReceived({ url, method: 'GET', statusCode: 200, responseHeaders: { 'Access-Control-Allow-Origin': ['https://introdb.app'] } }, (v) => { response = v; });
+    return response;
+  };
+  assert.deepEqual(run('https://api.introdb.app/segments?imdb_id=tt1').responseHeaders['Access-Control-Allow-Origin'], ['app://kovies']);
+  assert.equal(run('https://evil.example/segments').responseHeaders, undefined);
+});
+
 test('protocol rejects traversal, alternate streams and symlink escape; serves routes and MIME', async () => {
   let handler;
   const protocol = await load('main/protocol.ts', {

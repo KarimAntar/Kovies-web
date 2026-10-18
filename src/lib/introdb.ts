@@ -8,6 +8,8 @@
  * as "no data".
  */
 
+import { isDesktop } from '../platform';
+
 export interface SegmentTime {
   startSec: number;
   endSec: number;
@@ -39,6 +41,10 @@ interface IntroDbAppResponse {
 }
 
 const memoryCache = new Map<string, SkipSegments | null>();
+
+// introdb.app only allows its own site via CORS: browsers use the same-origin
+// Vercel proxy (api/introdb.ts); the desktop main process allows app://kovies.
+const INTRODB_APP_URL = isDesktop ? 'https://api.introdb.app/segments' : '/api/introdb';
 
 /** A null start means "from the beginning"; a null end means "until the end". */
 const toSegment = (raw?: RawSegment | null): SegmentTime | undefined => {
@@ -97,7 +103,7 @@ async function fetchIntroDbApp(
   } else {
     params.set('is_movie', 'true');
   }
-  const data = await getJson<IntroDbAppResponse>(`https://api.introdb.app/segments?${params}`, signal);
+  const data = await getJson<IntroDbAppResponse>(`${INTRODB_APP_URL}?${params}`, signal);
   if (!data) return {};
   return { intro: toSegment(data.intro), recap: toSegment(data.recap), credits: toSegment(data.outro) };
 }

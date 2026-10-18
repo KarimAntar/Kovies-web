@@ -33,6 +33,9 @@ function setHeader(headers: Record<string, string | string[]>, name: string, val
   headers[name] = value;
 }
 
+/** Public read-only APIs the renderer calls directly whose CORS policy excludes app://kovies. */
+const PUBLIC_GET_HOSTS = new Set(['api.introdb.app']);
+
 const STREAM_RESOURCE_TYPES = new Set(['media', 'xhr', 'fetch']);
 
 export function installNetworkHooks(ses: Session, streams: StreamHeaderStore): void {
@@ -76,13 +79,16 @@ export function installNetworkHooks(ses: Session, streams: StreamHeaderStore): v
     const u = parse(details.url);
     const isApi = u !== null && isApiUrl(u);
     const isStream = u !== null && u.protocol === 'https:' && streams.get(u.hostname) !== undefined;
-    if (!isApi && !isStream) return callback({});
+    const isPublicGet = u !== null && u.protocol === 'https:' && u.port === '' && PUBLIC_GET_HOSTS.has(u.hostname);
+    if (!isApi && !isStream && !isPublicGet) return callback({});
 
     const responseHeaders = { ...(details.responseHeaders ?? {}) };
     setHeader(responseHeaders, 'Access-Control-Allow-Origin', [APP_ORIGIN]);
     if (isApi) {
       setHeader(responseHeaders, 'Access-Control-Allow-Headers', ['Content-Type, Authorization, X-API-Key']);
       setHeader(responseHeaders, 'Access-Control-Allow-Methods', ['GET, POST, PUT, DELETE, OPTIONS']);
+    } else if (isPublicGet && !isStream) {
+      setHeader(responseHeaders, 'Access-Control-Allow-Methods', ['GET, OPTIONS']);
     } else if (isStream) {
       setHeader(responseHeaders, 'Access-Control-Allow-Headers', ['*']);
       setHeader(responseHeaders, 'Access-Control-Allow-Methods', ['GET, HEAD, OPTIONS']);

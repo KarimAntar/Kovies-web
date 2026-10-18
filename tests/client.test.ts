@@ -251,7 +251,8 @@ test('fetchSkipSegments falls back to introdb.app when TheIntroDB has no data', 
     assert.equal(segments?.intro?.endSec, 150);
     assert.equal(segments?.credits?.startSec, 1300);
     assert.equal(segments?.credits?.endSec, Infinity);
-    assert.ok(requested.some((u) => u.includes('api.introdb.app/segments') && u.includes('imdb_id=tt14976292') && u.includes('season=1') && u.includes('episode=1')));
+    // Browsers go through the same-origin proxy (introdb.app's CORS only allows its own site).
+    assert.ok(requested.some((u) => u.startsWith('/api/introdb?') && u.includes('imdb_id=tt14976292') && u.includes('season=1') && u.includes('episode=1')));
   } finally {
     globalThis.fetch = originalFetch;
   }
