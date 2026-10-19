@@ -78,7 +78,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
       name: 'macOS',
       version: releases.desktopVersion,
       tag: 'Universal (Apple Silicon & Intel)',
-      requirements: 'macOS 12 Monterey or later. First launch: right-click Kovies → Open (the app is not notarized yet).',
+      requirements: 'macOS 12 Monterey or later. Not notarized yet: if macOS blocks the first launch, open System Settings → Privacy & Security → Open Anyway, or run: xattr -cr /Applications/Kovies.app',
       icon: <AppleIcon />,
       accent: 'from-purple-500/20 to-indigo-500/10',
       badge: userOs === 'macos' ? 'Your Operating System' : undefined,
