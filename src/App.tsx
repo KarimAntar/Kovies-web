@@ -515,10 +515,17 @@ function MainApp() {
     'Animation',
     'Comedy',
     'Crime',
+    'Documentary',
     'Drama',
+    'Family',
+    'Fantasy',
+    'Horror',
     'Mystery',
-    'Sci-Fi & Fantasy',
+    'Romance',
+    'Science Fiction',
     'Thriller',
+    'War',
+    'Western',
   ];
 
   if (viewMode === 'landing') {
@@ -577,6 +584,27 @@ function MainApp() {
               <div className="pt-4">
                 <ProviderRow providers={homeData?.providers} onSelect={openProvider} />
               </div>
+
+              {/* Browse by Genre — opens Discover filtered to the genre */}
+              <section aria-label="Browse by Genre" className="w-full px-4 sm:px-8 md:px-12 lg:px-16">
+                <h2 className="font-title text-base sm:text-lg font-bold text-white mb-3">Browse by Genre</h2>
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2">
+                  {GENRES.filter((g) => g !== 'all').map((genre) => (
+                    <button
+                      key={genre}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGenre(genre);
+                        setGenreReloadTick((n) => n + 1);
+                        setActiveTab('discover');
+                      }}
+                      className="shrink-0 px-4 py-2 rounded-full bg-surface-800 hover:bg-primary/30 border border-white/10 text-sm text-gray-200 hover:text-white transition-colors"
+                    >
+                      {genre}
+                    </button>
+                  ))}
+                </div>
+              </section>
 
               {/* Trending — movies and series are separate rails (falls back to the mixed rail on older APIs) */}
               {homeData?.trendingMovies && homeData.trendingMovies.length > 0 ? (

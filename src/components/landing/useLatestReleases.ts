@@ -8,6 +8,10 @@ export interface ReleaseAsset {
 
 export interface PlatformDownloads {
   tag: string;
+  /** Desktop (Windows/macOS) version label, e.g. v0.2.2 */
+  desktopVersion: string;
+  /** Android / Android TV version label, e.g. v0.9.3 */
+  androidVersion: string;
   windowsSetup: string;
   windowsPortable: string;
   macArm64: string;
@@ -18,13 +22,15 @@ export interface PlatformDownloads {
 }
 
 const FALLBACK_DOWNLOADS: PlatformDownloads = {
-  tag: 'v0.1.0',
-  windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.1.0-x64.exe',
-  windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0-x64-portable.exe',
-  macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0-arm64.dmg',
-  macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.1.0.dmg',
-  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v0.9.1.apk',
-  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v0.9.1.apk',
+  tag: 'latest',
+  desktopVersion: 'v0.2.2',
+  androidVersion: 'v0.9.3',
+  windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.2.2-x64.exe',
+  windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.2-x64-portable.exe',
+  macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.2-arm64.dmg',
+  macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.2.dmg',
+  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v0.9.3.apk',
+  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v0.9.3.apk',
   isLoading: false,
 };
 
@@ -58,37 +64,52 @@ export function useLatestReleases(): PlatformDownloads {
         const tag = data.tag_name || FALLBACK_DOWNLOADS.tag;
         const assets = Array.isArray(data.assets) ? data.assets : [];
 
-        let winSetup = FALLBACK_DOWNLOADS.windowsSetup;
-        let winPortable = FALLBACK_DOWNLOADS.windowsPortable;
-        let macArm = FALLBACK_DOWNLOADS.macArm64;
-        let macIntel = FALLBACK_DOWNLOADS.macIntel;
-        let androidApk = FALLBACK_DOWNLOADS.androidApk;
-        let tvApk = FALLBACK_DOWNLOADS.androidTvApk;
+        const versionOf = (n: string) => /(\d+(?:\.\d+)+)/.exec(n)?.[1] ?? '0';
+        const isNewer = (a: string, b: string) => {
+          const x = a.split('.').map(Number);
+          const y = b.split('.').map(Number);
+          for (let i = 0; i < Math.max(x.length, y.length); i++) {
+            if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+          }
+          return false;
+        };
+
+        // The release keeps older installers too: per download slot, the highest version wins.
+        type Slot = 'winSetup' | 'winPortable' | 'macArm' | 'macIntel' | 'apk' | 'tv';
+        const best: Partial<Record<Slot, { url: string; version: string }>> = {};
+        const offer = (slot: Slot, url: string, version: string) => {
+          const cur = best[slot];
+          if (!cur || isNewer(version, cur.version)) best[slot] = { url, version };
+        };
 
         for (const asset of assets) {
           const name = asset.name.toLowerCase();
           const url = asset.browser_download_url;
-
+          const v = versionOf(name);
           if (name.endsWith('.exe')) {
-            if (name.includes('portable')) winPortable = url;
-            else winSetup = url;
+            offer(name.includes('portable') ? 'winPortable' : 'winSetup', url, v);
           } else if (name.endsWith('.dmg')) {
-            if (name.includes('arm64') || name.includes('m1') || name.includes('apple')) macArm = url;
-            else macIntel = url;
+            offer(name.includes('arm64') ? 'macArm' : 'macIntel', url, v);
           } else if (name.endsWith('.apk')) {
-            if (name.includes('tv') || name.includes('leanback')) tvApk = url;
-            else androidApk = url;
+            offer(name.includes('tv') ? 'tv' : 'apk', url, v);
           }
         }
 
-        // If macArm was found but not intel or vice versa, fallback to the available one
-        if (macArm !== FALLBACK_DOWNLOADS.macArm64 && macIntel === FALLBACK_DOWNLOADS.macIntel) {
-          macIntel = macArm;
-        }
+        const winSetup = best.winSetup?.url ?? FALLBACK_DOWNLOADS.windowsSetup;
+        const winPortable = best.winPortable?.url ?? FALLBACK_DOWNLOADS.windowsPortable;
+        const macArm = best.macArm?.url ?? FALLBACK_DOWNLOADS.macArm64;
+        // Intel Macs run the arm64-only build via the universal dmg when present; otherwise reuse arm64.
+        const macIntel = best.macIntel?.url ?? best.macArm?.url ?? FALLBACK_DOWNLOADS.macIntel;
+        const androidApk = best.apk?.url ?? FALLBACK_DOWNLOADS.androidApk;
+        const tvApk = best.tv?.url ?? FALLBACK_DOWNLOADS.androidTvApk;
+        const desktopVersion = best.winSetup ? `v${best.winSetup.version}` : FALLBACK_DOWNLOADS.desktopVersion;
+        const androidVersion = best.apk ? `v${best.apk.version}` : FALLBACK_DOWNLOADS.androidVersion;
 
         if (mounted) {
           setDownloads({
             tag,
+            desktopVersion,
+            androidVersion,
             windowsSetup: winSetup,
             windowsPortable: winPortable,
             macArm64: macArm,

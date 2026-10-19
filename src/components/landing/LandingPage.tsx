@@ -76,9 +76,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
     {
       id: 'macos',
       name: 'macOS',
-      version: 'v0.1.0',
+      version: releases.desktopVersion,
       tag: 'Universal (Apple Silicon & Intel)',
-      requirements: 'macOS 12 Monterey or later',
+      requirements: 'macOS 12 Monterey or later. First launch: right-click Kovies → Open (the app is not notarized yet).',
       icon: <AppleIcon />,
       accent: 'from-purple-500/20 to-indigo-500/10',
       badge: userOs === 'macos' ? 'Your Operating System' : undefined,
@@ -90,7 +90,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
     {
       id: 'windows',
       name: 'Windows',
-      version: 'v0.1.0',
+      version: releases.desktopVersion,
       tag: '64-bit Windows 10 & 11',
       requirements: 'Windows 10 version 1809 or higher',
       icon: <WindowsIcon />,
@@ -104,7 +104,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
     {
       id: 'android',
       name: 'Android Mobile',
-      version: 'v0.9.1',
+      version: releases.androidVersion,
       tag: 'ARM64 & x86_64 APK',
       requirements: 'Android 8.0 Oreo or higher',
       icon: <AndroidIcon />,
@@ -117,7 +117,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
     {
       id: 'android-tv',
       name: 'Android TV & Google TV',
-      version: 'v0.9.1',
+      version: releases.androidVersion,
       tag: 'Dedicated 10-ft D-Pad UI',
       requirements: 'Android TV 9.0+, Fire TV Stick 4K',
       icon: <AndroidTvIcon />,
