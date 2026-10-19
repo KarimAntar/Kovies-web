@@ -28,7 +28,18 @@ interface ProviderRowProps {
 
 /** "Browse by Provider" — horizontally scrolling row of streaming-platform badges. */
 export const ProviderRow: React.FC<ProviderRowProps> = ({ providers, activeId, onSelect }) => {
-  const displayProviders = providers && providers.length > 0 ? providers : FALLBACK_PROVIDERS;
+  const source = providers && providers.length > 0 ? providers : FALLBACK_PROVIDERS;
+  // One badge per platform: TMDB lists "Apple TV" and "Apple TV+" separately with near-identical icons.
+  const hasApplePlus = source.some((p) => p.name.toLowerCase() === 'apple tv+');
+  const seen = new Set<string>();
+  const displayProviders = source.filter((p) => {
+    if (hasApplePlus && p.name.toLowerCase() === 'apple tv') return false;
+    const key = p.logo || p.name;
+    if (seen.has(p.id + '') || seen.has(key)) return false;
+    seen.add(p.id + '');
+    seen.add(key);
+    return true;
+  });
 
   return (
     <section aria-label="Browse by Provider" className="w-full px-4 sm:px-8 md:px-12 lg:px-16">
