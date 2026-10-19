@@ -184,6 +184,16 @@ export const api = {
     return request(`discover/provider${qs({ provider_id: providerId, type, page })}`, { signal });
   },
 
+  /** Titles in one genre (Browse by Genre). */
+  getGenreTitles(
+    genre: string,
+    type: 'movie' | 'tv' = 'movie',
+    page = 1,
+    signal?: AbortSignal
+  ): Promise<ProviderTitlesResponse> {
+    return request(`discover/genre${qs({ genre, type, page })}`, { signal });
+  },
+
   getMovieDetails(tmdbId: number, signal?: AbortSignal): Promise<MediaDetails> {
     return request(`movies/${id(tmdbId)}`, { signal });
   },

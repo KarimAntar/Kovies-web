@@ -50,6 +50,7 @@ jobs:
           path: |
             desktop/release/*.exe
             desktop/release/*.exe.blockmap
+            desktop/release/latest.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -124,9 +125,13 @@ jobs:
           cp dist-release/*.exe release-upload/ 2>/dev/null || true
           # Copy macOS DMGs
           cp dist-release/*.dmg release-upload/ 2>/dev/null || true
-          # Also ensure generic Kovies-0.1.0.dmg exists if only arm64 was generated
-          if [ -f release-upload/Kovies-0.1.0-arm64.dmg ] && [ ! -f release-upload/Kovies-0.1.0.dmg ]; then
-            cp release-upload/Kovies-0.1.0-arm64.dmg release-upload/Kovies-0.1.0.dmg
+          # electron-updater metadata for the Windows auto-update
+          cp dist-release/latest.yml release-upload/ 2>/dev/null || true
+          cp dist-release/*.blockmap release-upload/ 2>/dev/null || true
+          # Also ensure a generic Kovies-<version>.dmg exists if only arm64 was generated
+          VERSION=$(node -p "require('./desktop/package.json').version")
+          if [ -f "release-upload/Kovies-$VERSION-arm64.dmg" ] && [ ! -f "release-upload/Kovies-$VERSION.dmg" ]; then
+            cp "release-upload/Kovies-$VERSION-arm64.dmg" "release-upload/Kovies-$VERSION.dmg"
           fi
           ls -lh release-upload
       - name: Publish or Update GitHub Release

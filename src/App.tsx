@@ -124,6 +124,18 @@ function MainApp() {
   const [isSearching, setIsSearching] = useState(false);
   // Discover mixes movies and shows; each has its own page counter (page = last loaded page).
   const discoverPagesRef = useRef({ movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } });
+  const genrePagesRef = useRef({ movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } });
+
+  // Browse by Genre (Discover tab): titles in one genre across movies/shows.
+  const [genreReloadTick, setGenreReloadTick] = useState(0);
+  const {
+    feed: genreFeed,
+    reset: resetGenreFeed,
+    cancelMore: cancelGenreMore,
+    loadMore: loadMoreGenrePage,
+  } = usePagedFeed();
+  const [isLoadingGenre, setIsLoadingGenre] = useState(false);
+  const [genreError, setGenreError] = useState<string | null>(null);
 
   // Browse by Provider (Netflix, Disney+, ...)
   const [activeProvider, setActiveProvider] = useState<StreamingProvider | null>(null);
@@ -245,6 +257,39 @@ function MainApp() {
     return { results, total_pages: more ? nextPage + 1 : nextPage };
   }, []);
 
+  // One Genre step: same movie+show merge as Discover, filtered server-side by genre.
+  const loadGenrePage = useCallback(
+    async (genre: string, nextPage: number, signal: AbortSignal): Promise<PageResult> => {
+      const sides = (['movie', 'tv'] as const).filter((t) => {
+        const p = genrePagesRef.current[t];
+        return p.page < Math.min(MAX_PAGES, p.total);
+      });
+      const settled = await Promise.allSettled(
+        sides.map((t) => api.getGenreTitles(genre, t, genrePagesRef.current[t].page + 1, signal))
+      );
+      if (signal.aborted) return { results: [] };
+      const pages = { ...genrePagesRef.current };
+      const results: MediaItem[] = [];
+      let failures = 0;
+      let firstError: unknown;
+      settled.forEach((r, i) => {
+        const t = sides[i];
+        if (r.status === 'fulfilled') {
+          results.push(...(r.value.results || []));
+          pages[t] = { page: pages[t].page + 1, total: r.value.total_pages || pages[t].total };
+        } else {
+          failures += 1;
+          firstError ??= r.reason;
+        }
+      });
+      if (sides.length > 0 && failures === sides.length) throw firstError;
+      genrePagesRef.current = pages;
+      const more = (['movie', 'tv'] as const).some((t) => pages[t].page < Math.min(MAX_PAGES, pages[t].total));
+      return { results, total_pages: more ? nextPage + 1 : nextPage };
+    },
+    []
+  );
+
   // Load first page of Movies, Shows or Discover
   useEffect(() => {
     if (activeTab === 'movies' || activeTab === 'shows') {
@@ -269,37 +314,68 @@ function MainApp() {
     }
     if (activeTab === 'discover') {
       const controller = new AbortController();
+      const cancelLoadMore = () => controller.abort();
       setIsLoadingTab(true);
       setTabError(null);
-      resetTabFeed();
-      discoverPagesRef.current = { movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } };
-      // Mix popular movies and shows.
-      loadDiscoverPage(1, controller.signal)
-        .then((res) => {
-          if (controller.signal.aborted) return;
-          resetTabFeed({ items: res.results || [], totalPages: res.total_pages || 1 });
-        })
-        .catch((err) => {
-          if (!controller.signal.aborted) setTabError(apiErrorMessage(err, 'Could not load the Discover catalogue.'));
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setIsLoadingTab(false);
-        });
-      return () => controller.abort();
+
+      if (selectedGenre !== 'all') {
+        // Browse by Genre: fetch titles in that genre across movies/shows.
+        resetGenreFeed();
+        genrePagesRef.current = { movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } };
+        setGenreError(null);
+        setIsLoadingGenre(true);
+        loadGenrePage(selectedGenre, 1, controller.signal)
+          .then((res) => {
+            if (controller.signal.aborted) return;
+            resetGenreFeed({ items: res.results || [], totalPages: res.total_pages || 1 });
+          })
+          .catch((err) => {
+            if (!controller.signal.aborted) setGenreError(apiErrorMessage(err, `Could not load ${selectedGenre} titles.`));
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) {
+              setIsLoadingGenre(false);
+              setIsLoadingTab(false);
+            }
+          });
+      } else {
+        // Mix popular movies and shows.
+        resetTabFeed();
+        discoverPagesRef.current = { movie: { page: 0, total: 1 }, tv: { page: 0, total: 1 } };
+        loadDiscoverPage(1, controller.signal)
+          .then((res) => {
+            if (controller.signal.aborted) return;
+            resetTabFeed({ items: res.results || [], totalPages: res.total_pages || 1 });
+          })
+          .catch((err) => {
+            if (!controller.signal.aborted) setTabError(apiErrorMessage(err, 'Could not load the Discover catalogue.'));
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setIsLoadingTab(false);
+          });
+      }
+      return () => {
+        cancelLoadMore();
+        cancelGenreMore();
+      };
     }
     setIsLoadingTab(false);
     setTabError(null);
     resetTabFeed();
-  }, [activeTab, reloadTick, resetTabFeed, loadDiscoverPage]);
+  }, [activeTab, reloadTick, genreReloadTick, selectedGenre, resetTabFeed, loadDiscoverPage, loadGenrePage, resetGenreFeed, cancelGenreMore]);
 
   const loadMoreTabItems = useCallback(() => {
     if (activeTab === 'discover') {
+      if (selectedGenre !== 'all') {
+        void loadMoreGenrePage((pg, signal) => loadGenrePage(selectedGenre, pg, signal));
+        return;
+      }
       void loadMoreTab(loadDiscoverPage);
     } else if (activeTab === 'movies' || activeTab === 'shows') {
       const type = activeTab === 'movies' ? 'movie' : 'tv';
       void loadMoreTab((page, signal) => api.getPopular(type, page, signal));
     }
-  }, [activeTab, loadMoreTab, loadDiscoverPage]);
+  }, [activeTab, loadMoreTab, loadDiscoverPage, selectedGenre, loadMoreGenrePage, loadGenrePage]);
 
   // Search page results (the navbar box is the quick-access variant). Typing is debounced;
   // an explicit submit (Enter) bumps searchTick and runs through this same path without the delay.
@@ -689,7 +765,7 @@ function MainApp() {
               </div>
             </div>
 
-            {isLoadingTab ? (
+            {isLoadingTab || (selectedGenre !== 'all' && isLoadingGenre) ? (
               <div className="py-24 flex items-center justify-center gap-2 text-gray-400">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 <span>Loading movies catalogue...</span>
@@ -846,7 +922,10 @@ function MainApp() {
                 {GENRES.map((genre) => (
                   <button
                     key={genre}
-                    onClick={() => setSelectedGenre(genre)}
+                    onClick={() => {
+                      setSelectedGenre(genre);
+                      setGenreReloadTick((n) => n + 1);
+                    }}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize whitespace-nowrap transition-all ${
                       selectedGenre.toLowerCase() === genre.toLowerCase()
                         ? 'bg-primary text-white shadow-md shadow-primary/30'
@@ -864,27 +943,54 @@ function MainApp() {
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 <span>Discovering titles...</span>
               </div>
-            ) : tabError && tabFeed.items.length === 0 ? (
+            ) : (selectedGenre !== 'all' && genreError && genreFeed.items.length === 0) ? (
+              <TabError message={genreError} onRetry={() => setGenreReloadTick((n) => n + 1)} />
+            ) : (selectedGenre !== 'all' && genreFeed.items.length === 0) ? (
+              <EmptyGrid message={`No titles in ${selectedGenre} yet.`} />
+            ) : selectedGenre === 'all' && tabError && tabFeed.items.length === 0 ? (
               <TabError message={tabError} onRetry={() => setReloadTick((n) => n + 1)} />
-            ) : tabFeed.items.length === 0 ? (
+            ) : selectedGenre === 'all' && tabFeed.items.length === 0 ? (
               <EmptyGrid message="Nothing to discover right now." />
             ) : (
               <>
-                {filteredTabItems.length === 0 && !tabHasMore && (
-                  <EmptyGrid message={`No titles in ${selectedGenre} yet.`} />
-                )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                  {filteredTabItems.map((item) => (
-                    <MediaCard
-                      key={`discover-${item.type ?? item.media_type}-${item.id || item.tmdbId}`}
-                      item={item}
-                      onSelect={(it) => setSelectedMedia(it)}
-                      onPlay={(it) => handlePlayMedia(it)}
+                {selectedGenre !== 'all' ? (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                      {genreFeed.items.map((item) => (
+                        <MediaCard
+                          key={`discover-${item.type ?? item.media_type}-${item.id || item.tmdbId}`}
+                          item={item}
+                          onSelect={(it) => setSelectedMedia(it)}
+                          onPlay={(it) => handlePlayMedia(it)}
+                        />
+                      ))}
+                    </div>
+                    <InfiniteSentinel
+                      hasMore={hasMorePages(genreFeed)}
+                      loading={genreFeed.loadingMore}
+                      error={genreFeed.error}
+                      onLoadMore={loadMoreTabItems}
                     />
-                  ))}
-                </div>
-                {/* Genre filtering is client-side: the sentinel keeps loading while the filtered grid is short. */}
-                {tabSentinel}
+                  </>
+                ) : (
+                  <>
+                    {filteredTabItems.length === 0 && !tabHasMore && (
+                      <EmptyGrid message={`No titles in ${selectedGenre} yet.`} />
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                      {filteredTabItems.map((item) => (
+                        <MediaCard
+                          key={`discover-${item.type ?? item.media_type}-${item.id || item.tmdbId}`}
+                          item={item}
+                          onSelect={(it) => setSelectedMedia(it)}
+                          onPlay={(it) => handlePlayMedia(it)}
+                        />
+                      ))}
+                    </div>
+                    {/* Genre filtering is client-side: the sentinel keeps loading while the filtered grid is short. */}
+                    {tabSentinel}
+                  </>
+                )}
               </>
             )}
           </div>

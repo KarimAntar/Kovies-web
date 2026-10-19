@@ -6,8 +6,6 @@ export const FALLBACK_PROVIDERS: StreamingProvider[] = [
   { id: 8, name: 'Netflix', logo: 'https://image.tmdb.org/t/p/w154/rK1KljqmbvO9HQa1PBFLILWah72.png' },
   { id: 9, name: 'Amazon Prime Video', logo: 'https://image.tmdb.org/t/p/w154/gMZdpavHmxFNnLpMHwVxfqeux2g.png' },
   { id: 337, name: 'Disney Plus', logo: 'https://image.tmdb.org/t/p/w154/5eZ872CghnHFLB1j8grszbrx0dx.png' },
-  { id: 350, name: 'Apple TV+', logo: 'https://image.tmdb.org/t/p/w154/9icYBfYFcwgCbky5VdGUIKJ4C5i.png' },
-  { id: 2, name: 'Apple TV', logo: 'https://image.tmdb.org/t/p/w154/qdEGArH3lKfFnAtYXMkSYk5wxuG.png' },
   { id: 15, name: 'Hulu', logo: 'https://image.tmdb.org/t/p/w154/44uAnmSqvA4yBOdbPWN8YgQHjWm.png' },
   { id: 1899, name: 'HBO Max', logo: 'https://image.tmdb.org/t/p/w154/skypuy7SXuugIQeYg0IglmzoKaS.png' },
   { id: 2303, name: 'Paramount Plus', logo: 'https://image.tmdb.org/t/p/w154/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png' },

@@ -285,3 +285,19 @@ test('fetchSkipSegments treats an introdb.app rate limit as no data', async () =
     globalThis.fetch = originalFetch;
   }
 });
+
+test('getGenreTitles forwards genre, type and page', async () => {
+  const calls: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (url: string) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ results: [], total_pages: 1 }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const { api } = await import('../src/api/client.ts');
+    await api.getGenreTitles('Sci-Fi & Fantasy', 'tv', 2);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.match(calls[0], /discover\/genre\?genre=Sci-Fi\+%26\+Fantasy&type=tv&page=2$/);
+});
