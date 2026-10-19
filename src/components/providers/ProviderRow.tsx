@@ -6,6 +6,7 @@ export const FALLBACK_PROVIDERS: StreamingProvider[] = [
   { id: 8, name: 'Netflix', logo: 'https://image.tmdb.org/t/p/w154/rK1KljqmbvO9HQa1PBFLILWah72.png' },
   { id: 9, name: 'Amazon Prime Video', logo: 'https://image.tmdb.org/t/p/w154/gMZdpavHmxFNnLpMHwVxfqeux2g.png' },
   { id: 337, name: 'Disney Plus', logo: 'https://image.tmdb.org/t/p/w154/5eZ872CghnHFLB1j8grszbrx0dx.png' },
+  { id: 350, name: 'Apple TV', logo: 'https://image.tmdb.org/t/p/w154/qdEGArH3lKfFnAtYXMkSYk5wxuG.png' },
   { id: 15, name: 'Hulu', logo: 'https://image.tmdb.org/t/p/w154/44uAnmSqvA4yBOdbPWN8YgQHjWm.png' },
   { id: 1899, name: 'HBO Max', logo: 'https://image.tmdb.org/t/p/w154/skypuy7SXuugIQeYg0IglmzoKaS.png' },
   { id: 2303, name: 'Paramount Plus', logo: 'https://image.tmdb.org/t/p/w154/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png' },
@@ -29,11 +30,9 @@ interface ProviderRowProps {
 /** "Browse by Provider" — horizontally scrolling row of streaming-platform badges. */
 export const ProviderRow: React.FC<ProviderRowProps> = ({ providers, activeId, onSelect }) => {
   const source = providers && providers.length > 0 ? providers : FALLBACK_PROVIDERS;
-  // One badge per platform: TMDB lists "Apple TV" and "Apple TV+" separately with near-identical icons.
-  const hasApplePlus = source.some((p) => p.name.toLowerCase() === 'apple tv+');
+  // One badge per platform (by id and icon).
   const seen = new Set<string>();
   const displayProviders = source.filter((p) => {
-    if (hasApplePlus && p.name.toLowerCase() === 'apple tv') return false;
     const key = p.logo || p.name;
     if (seen.has(p.id + '') || seen.has(key)) return false;
     seen.add(p.id + '');
