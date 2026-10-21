@@ -1,3 +1,5 @@
+import type { SubtitleStyle, SubSize, SubFont, SubColor, SubEdge } from '../../lib/subtitleStyle';
+import { DEFAULT_SUBTITLE_STYLE, SUBTITLE_COLORS, subtitleCss } from '../../lib/subtitleStyle';
 import React from 'react';
 import { Check } from 'lucide-react';
 import type { StreamingSource, SubtitleTrack } from '../../api/types';
@@ -17,7 +19,21 @@ interface SubtitleMenuProps {
   offsetSec: number;
   onOffsetChange: (delta: number) => void;
   onSelect: (track: SubtitleTrack | null) => void;
+  style: SubtitleStyle;
+  onStyleChange: (s: SubtitleStyle) => void;
 }
+
+const SIZES: SubSize[] = ['S', 'M', 'L', 'XL'];
+const FONTS: { id: SubFont; label: string; family: string }[] = [
+  { id: 'INTER', label: 'Inter', family: "'Inter', sans-serif" },
+  { id: 'MANROPE', label: 'Manrope', family: "'Manrope', sans-serif" },
+  { id: 'SANS', label: 'Sans', family: 'sans-serif' },
+  { id: 'SERIF', label: 'Serif', family: 'serif' },
+  { id: 'MONO', label: 'Mono', family: 'monospace' },
+];
+const COLORS: SubColor[] = ['WHITE', 'YELLOW', 'CYAN', 'GREEN'];
+const EDGES: SubEdge[] = ['NONE', 'SHADOW', 'OUTLINE', 'RAISED'];
+const BACKGROUNDS = [0, 0.25, 0.5, 0.75, 1.0];
 
 export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
   groups,
@@ -28,8 +44,10 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
   offsetSec,
   onOffsetChange,
   onSelect,
+  style,
+  onStyleChange,
 }) => (
-  <div role="menu" aria-label="Subtitles" className={`${menuShell} w-72 max-h-[60vh]`}>
+  <div role="menu" aria-label="Subtitles" className={`${menuShell} w-80 max-h-[70vh]`}>
     <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-surface-800 flex items-center justify-between">
       <span>Subtitles</span>
       {loading && <span className="normal-case font-medium text-primary-hover">Loading…</span>}
@@ -82,6 +100,155 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
         </div>
       </div>
     )}
+
+    {/* Style Section */}
+    <div className="px-3 py-2 border-b border-surface-800/80 bg-surface-950/40 rounded-xl my-1.5 space-y-2.5">
+      <div className="flex items-center justify-between text-[11px] font-semibold text-gray-300">
+        <span className="uppercase tracking-wider text-gray-400">Subtitle Style</span>
+        <button
+          type="button"
+          onClick={() => onStyleChange(DEFAULT_SUBTITLE_STYLE)}
+          className="text-[10px] text-gray-400 hover:text-white transition-colors"
+        >
+          Reset to defaults
+        </button>
+      </div>
+
+      {/* Live preview line */}
+      <div className="p-2 rounded-lg bg-black/60 flex items-center justify-center min-h-[44px] overflow-hidden text-center">
+        <span style={subtitleCss(style)} className="kovies-subtitle !max-w-full">
+          This is how subtitles will look.
+        </span>
+      </div>
+
+      {/* Size segmented */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400 text-[11px]">Size</span>
+        <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
+          {SIZES.map((sz) => (
+            <button
+              key={sz}
+              type="button"
+              onClick={() => onStyleChange({ ...style, size: sz })}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                style.size === sz ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {sz}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Font chips */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400 text-[11px]">Font</span>
+        <div className="flex flex-wrap gap-1 justify-end max-w-[200px]">
+          {FONTS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              style={{ fontFamily: f.family }}
+              onClick={() => onStyleChange({ ...style, font: f.id })}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-all ${
+                style.font === f.id
+                  ? 'bg-primary/20 text-primary-hover ring-1 ring-primary'
+                  : 'bg-surface-800 text-gray-300 hover:text-white'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Colour swatches */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400 text-[11px]">Colour</span>
+        <div className="flex items-center gap-2">
+          {COLORS.map((col) => {
+            const hex = SUBTITLE_COLORS[col];
+            const isSelected = style.color === col;
+            return (
+              <button
+                key={col}
+                type="button"
+                onClick={() => onStyleChange({ ...style, color: col })}
+                className={`w-5 h-5 rounded-full transition-transform ${
+                  isSelected ? 'ring-2 ring-primary scale-110' : 'ring-1 ring-white/20 hover:scale-105'
+                }`}
+                style={{ backgroundColor: hex }}
+                title={col}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Edge segmented */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400 text-[11px]">Edge</span>
+        <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
+          {EDGES.map((ed) => (
+            <button
+              key={ed}
+              type="button"
+              onClick={() => onStyleChange({ ...style, edge: ed })}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
+                style.edge === ed ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {ed === 'NONE' ? 'None' : ed === 'SHADOW' ? 'Shadow' : ed === 'OUTLINE' ? 'Outline' : 'Raised'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Background segmented */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400 text-[11px]">Background</span>
+        <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
+          {BACKGROUNDS.map((bg) => (
+            <button
+              key={bg}
+              type="button"
+              onClick={() => onStyleChange({ ...style, background: bg })}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
+                Math.abs(style.background - bg) < 0.05 ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {bg === 0 ? 'Off' : `${Math.round(bg * 100)}%`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Position buttons */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400 text-[11px]">Position</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            disabled={style.position <= -2}
+            onClick={() => onStyleChange({ ...style, position: Math.max(-2, style.position - 1) })}
+            className="w-6 h-6 rounded bg-surface-800 hover:bg-surface-700 disabled:opacity-30 text-xs font-bold text-gray-200 flex items-center justify-center transition-colors"
+          >
+            −
+          </button>
+          <span className="w-8 text-center font-mono text-[11px] text-primary-hover">
+            {style.position > 0 ? `+${style.position}` : `${style.position}`}
+          </span>
+          <button
+            type="button"
+            disabled={style.position >= 4}
+            onClick={() => onStyleChange({ ...style, position: Math.min(4, style.position + 1) })}
+            className="w-6 h-6 rounded bg-surface-800 hover:bg-surface-700 disabled:opacity-30 text-xs font-bold text-gray-200 flex items-center justify-center transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </div>
 
     {error && <p className="px-3 py-2 text-xs text-red-400">{error}</p>}
     <button

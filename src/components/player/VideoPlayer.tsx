@@ -1,3 +1,4 @@
+import { loadSubtitleStyle, saveSubtitleStyle, subtitleCss, subtitleLiftVh, type SubtitleStyle } from '../../lib/subtitleStyle';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
@@ -171,6 +172,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [subtitleError, setSubtitleError] = useState<string | null>(null);
   const [subtitleCues, setSubtitleCues] = useState<VttCue[]>([]);
   const [subtitleOffsetSec, setSubtitleOffsetSec] = useState<number>(0);
+  const [subStyle, setSubStyle] = useState<SubtitleStyle>(() => loadSubtitleStyle());
+  const handleStyleChange = (s: SubtitleStyle) => {
+    saveSubtitleStyle(s);
+    setSubStyle(s);
+  };
   const [skipSegments, setSkipSegments] = useState<SkipSegments | null>(null);
   const subtitleAbortRef = useRef<AbortController | null>(null);
   const subtitleGroups = useMemo(() => groupSubtitles(subtitleTracks), [subtitleTracks]);
@@ -949,13 +955,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           aria-live="polite"
           className="pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center gap-1 px-6 text-center"
           style={{
-            // Low by default; lifted above the control bar while it is visible (never faded).
-            bottom: showControls ? '7.5rem' : '4vh',
+            // Low by default; lifted above the control bar while it is visible (never faded) + custom position lift
+            bottom: `calc(${showControls ? '7.5rem' : '4vh'} + ${subtitleLiftVh(subStyle)}vh)`,
             transition: 'bottom 220ms ease',
           }}
         >
           {showSubtitleOverlay.map((cue, i) => (
-            <span key={`${cue.start}-${i}`} className="kovies-subtitle">
+            <span
+              key={`${cue.start}-${i}`}
+              className="kovies-subtitle"
+              style={subtitleCss(subStyle)}
+            >
               {cue.text.split('\n').map((line, j) => (
                 <span key={j} className="block">
                   {line}
@@ -1119,6 +1129,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                       selectSubtitle(track);
                       setOpenMenu(null);
                     }}
+                    style={subStyle}
+                    onStyleChange={handleStyleChange}
                   />
                 )}
               </div>
