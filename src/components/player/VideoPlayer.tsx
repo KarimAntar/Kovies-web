@@ -32,6 +32,29 @@ import { SettingsMenu, SubtitleMenu } from './PlayerMenus';
 
 const CONTROLS_IDLE_MS = 3000;
 const SUBTITLE_PREF_KEY = 'kovies_subtitle_lang';
+const SUBTITLE_TITLE_KEY_PREFIX = 'kovies_sub_track:';
+
+function titleSubKey(tmdbId: number, mediaType: string, season?: number, episode?: number): string {
+  return `${SUBTITLE_TITLE_KEY_PREFIX}${mediaType}:${tmdbId}:${season ?? ''}:${episode ?? ''}`;
+}
+
+function readSavedTrackUrl(tmdbId: number, mediaType: string, season?: number, episode?: number): string | null {
+  try {
+    return localStorage.getItem(titleSubKey(tmdbId, mediaType, season, episode));
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedTrackUrl(tmdbId: number, mediaType: string, season: number | undefined, episode: number | undefined, url: string | null): void {
+  try {
+    const k = titleSubKey(tmdbId, mediaType, season, episode);
+    if (url) localStorage.setItem(k, url);
+    else localStorage.removeItem(k);
+  } catch {
+    // ignore
+  }
+}
 
 interface VideoPlayerProps {
   media: MediaItem;
@@ -383,7 +406,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setSubtitleError(null);
     setSubtitleOffsetSec(0);
     setActiveSubtitle(track);
-    if (remember) writeSubtitlePref(track ? track.language : null);
+    if (remember) {
+      writeSubtitlePref(track ? track.language : null);
+      writeSavedTrackUrl(tmdbId, mediaType, season, episode, track ? track.url : null);
+    }
     if (!track) {
       setSubtitleCues([]);
       setSubtitleBlobUrl(null);
@@ -413,16 +439,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       });
   }, []);
 
-  // Restore the remembered subtitle language once the list arrives.
+  // Restore the exact subtitle track previously chosen for this title (or fall back to preferred language).
   const autoSubtitleDoneRef = useRef(false);
   useEffect(() => {
     if (autoSubtitleDoneRef.current || subtitleTracks.length === 0) return;
     autoSubtitleDoneRef.current = true;
     const pref = readSubtitlePref();
-    if (!pref) return;
-    const match = subtitleTracks.find((t) => t.language === pref);
+    if (!pref) return; // User explicitly turned subtitles off
+    const savedUrl = readSavedTrackUrl(tmdbId, mediaType, season, episode);
+    const match = (savedUrl ? subtitleTracks.find((t) => t.url === savedUrl) : null)
+      || subtitleTracks.find((t) => t.language === pref);
     if (match) selectSubtitle(match, false);
-  }, [subtitleTracks, selectSubtitle]);
+  }, [subtitleTracks, selectSubtitle, tmdbId, mediaType, season, episode]);
 
   // ---------------------------------------------------------------------------
   // Controls auto-hide
@@ -787,8 +815,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const loading = !streamError && (sourcesLoading || isBuffering);
+  // Hide subtitle overlay while the video is still buffering at startup.
   const showSubtitleOverlay =
-    subtitleCues.length > 0 ? activeCues(subtitleCues, shownTime + subtitleOffsetSec) : [];
+    !loading && isPlaying && subtitleCues.length > 0
+      ? activeCues(subtitleCues, shownTime + subtitleOffsetSec)
+      : [];
   // Native macOS traffic lights sit over the window's top-left corner.
   const isMacDesktop = desktop?.platform === 'darwin';
 
