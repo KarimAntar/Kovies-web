@@ -44,18 +44,20 @@ interface VideoPlayerProps {
   onNavigateEpisode?: (delta: 1 | -1) => void;
 }
 
+/** Preferred subtitle language: English unless the viewer picked another one or turned them off. */
 function readSubtitlePref(): string | null {
   try {
-    return localStorage.getItem(SUBTITLE_PREF_KEY);
+    const value = localStorage.getItem(SUBTITLE_PREF_KEY);
+    if (value === 'off') return null;
+    return value || 'en';
   } catch {
-    return null;
+    return 'en';
   }
 }
 
 function writeSubtitlePref(lang: string | null): void {
   try {
-    if (lang) localStorage.setItem(SUBTITLE_PREF_KEY, lang);
-    else localStorage.removeItem(SUBTITLE_PREF_KEY);
+    localStorage.setItem(SUBTITLE_PREF_KEY, lang || 'off');
   } catch {
     // ignore
   }
