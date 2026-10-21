@@ -1,6 +1,6 @@
 import { desktop } from '../../platform';
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bookmark, Download, Film, Tv, Compass, Home, User, LogOut, X, Star } from 'lucide-react';
+import { Search, Bookmark, Download, Film, Tv, Home, User, LogOut, X, Star } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import { api } from '../../api/client';
@@ -96,7 +96,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'movies', label: 'Movies', icon: <Film className="w-4 h-4 flex-shrink-0" /> },
     { id: 'shows', label: 'Shows', icon: <Tv className="w-4 h-4 flex-shrink-0" /> },
     { id: 'watchlist', label: 'My List', icon: <Bookmark className="w-4 h-4 flex-shrink-0" /> },
-    { id: 'discover', label: 'Discover', icon: <Compass className="w-4 h-4 flex-shrink-0" /> },
   ];
 
   // Mobile navigation includes Search tab for phone touch targets
