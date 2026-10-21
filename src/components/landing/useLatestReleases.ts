@@ -10,7 +10,7 @@ export interface PlatformDownloads {
   tag: string;
   /** Desktop (Windows/macOS) version label, e.g. v0.2.5 */
   desktopVersion: string;
-  /** Android / Android TV version label, e.g. v0.9.7 */
+  /** Android / Android TV version label, e.g. v0.9.8 */
   androidVersion: string;
   windowsSetup: string;
   windowsPortable: string;
@@ -24,13 +24,13 @@ export interface PlatformDownloads {
 const FALLBACK_DOWNLOADS: PlatformDownloads = {
   tag: 'latest',
   desktopVersion: 'v0.2.5',
-  androidVersion: 'v0.9.7',
+  androidVersion: 'v0.9.8',
   windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.2.5-x64.exe',
   windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.5-x64-portable.exe',
   macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.5-arm64.dmg',
   macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.5.dmg',
-  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v0.9.7.apk',
-  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v0.9.7.apk',
+  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v0.9.8.apk',
+  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v0.9.8.apk',
   isLoading: false,
 };
 
