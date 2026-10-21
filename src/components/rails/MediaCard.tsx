@@ -99,8 +99,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         {historyItem ? (
           <button
             onClick={handleRemoveHistoryClick}
-            title="Remove from Continue Watching"
-            aria-label="Remove from Continue Watching"
+            title="Clear Progress"
+            aria-label="Clear Progress"
             className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full bg-black/75 hover:bg-red-500/80 text-gray-300 hover:text-white border border-white/15 backdrop-blur-md shadow-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 focus:opacity-100"
           >
             <X className="w-3.5 h-3.5" />

@@ -903,8 +903,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           aria-live="polite"
           className="pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center gap-1 px-6 text-center"
           style={{
-            bottom: showControls ? '6.5rem' : '1.75rem',
-            transition: 'bottom 300ms ease',
+            // Low by default; lifted above the control bar while it is visible (never faded).
+            bottom: showControls ? '7.5rem' : '4vh',
+            transition: 'bottom 220ms ease',
           }}
         >
           {showSubtitleOverlay.map((cue, i) => (

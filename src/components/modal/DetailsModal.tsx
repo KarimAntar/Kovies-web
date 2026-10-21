@@ -343,15 +343,15 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
                 <span>{isSaved ? 'In My List' : 'Add to List'}</span>
               </button>
 
-              {/* Remove from Continue Watching if in history */}
+              {/* Clear Progress if in history */}
               {currentHistory && (
                 <button
                   onClick={handleRemoveHistory}
-                  title="Remove from Continue Watching"
+                  title="Clear Progress"
                   className="flex items-center gap-2 px-4 py-3 rounded-full font-medium text-sm sm:text-base border border-surface-700 bg-surface-800/80 hover:bg-red-500/20 hover:border-red-500/40 text-gray-300 hover:text-red-300 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>Remove from Continue Watching</span>
+                  <span>Clear Progress</span>
                 </button>
               )}
             </div>
