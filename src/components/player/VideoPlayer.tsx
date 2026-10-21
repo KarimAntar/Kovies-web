@@ -16,8 +16,10 @@ import {
   AlertTriangle,
   SkipForward,
   FastForward,
+  Clapperboard,
 } from 'lucide-react';
-import type { MediaItem, MediaType, StreamingSource, SubtitleTrack } from '../../api/types';
+import type { MediaItem, MediaType, ReleaseWindow, SourcesResponse, StreamingSource, SubtitleTrack } from '../../api/types';
+import { releaseNotice, type ReleaseNoticeText } from '../../lib/releaseNotice';
 import { api, errorMessage, isAbortError } from '../../api/client';
 import { createVttBlobUrl, srtToVtt } from '../../lib/srtToVtt';
 import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../../lib/playback';
@@ -127,6 +129,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [attachKey, setAttachKey] = useState(0);
   const [isBuffering, setIsBuffering] = useState(true);
   const [streamError, setStreamError] = useState<string | null>(null);
+  // Set when a movie has no stream because it is still in (or not yet in) cinemas.
+  const [releaseInfo, setReleaseInfo] = useState<ReleaseNoticeText | null>(null);
   const currentSource = sourceIndex >= 0 ? sources[sourceIndex] ?? null : null;
 
   // Resume position (seconds) — taken once from Continue Watching.
@@ -228,11 +232,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const controller = new AbortController();
     const { signal } = controller;
 
-    const pickSource = (list: StreamingSource[]) => {
+    const pickSource = (list: StreamingSource[], releaseWindow?: ReleaseWindow) => {
       setSources(list);
       if (list.length === 0) {
+        const notice = releaseNotice(releaseWindow, title);
         setSourceIndex(-1);
-        setStreamError('No streams currently available for this title.');
+        setReleaseInfo(notice);
+        setStreamError(notice?.body ?? 'No streams currently available for this title.');
         return;
       }
       const playable = list.findIndex(isPlayableHere);
@@ -246,17 +252,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     setSourcesLoading(true);
     setStreamError(null);
+    setReleaseInfo(null);
 
     // Reuses the lookup the details modal prefetched (finished or still in flight); ranked best quality first.
     const sourcesPromise = initialSource
-      ? Promise.resolve({ sources: [initialSource] })
+      ? Promise.resolve<Pick<SourcesResponse, 'sources' | 'releaseWindow'>>({ sources: [initialSource] })
       : loadSources(tmdbId, isTv ? 'tv' : 'movie', season, episode);
 
     sourcesPromise
       .then((res) => {
         if (signal.aborted) return;
         const list = Array.isArray(res?.sources) ? res.sources : [];
-        pickSource(list);
+        pickSource(list, res?.releaseWindow);
         // Fallback subtitles embedded in sources (used if the list endpoint fails).
         const embedded = list.flatMap((s) => s.subtitles ?? []);
         if (embedded.length) {
@@ -896,10 +903,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {streamError && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-surface-950/95 p-6">
           <div role="alert" className="max-w-md text-center">
-            <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-            <h3 className="font-title text-xl font-bold text-white mb-2">Playback unavailable</h3>
+            {releaseInfo ? (
+              <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary mb-4">
+                <Clapperboard className="w-8 h-8" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+            )}
+            <h3 className="font-title text-xl font-bold text-white mb-2">{releaseInfo?.title ?? 'Playback unavailable'}</h3>
             <p className="text-sm text-gray-300 mb-6 leading-relaxed">{typeof streamError === 'string' ? streamError : errorMessage(streamError, 'No streams currently available for this title.')}</p>
             <div className="flex flex-wrap justify-center gap-3">
               {nextPlayableIndex >= 0 && (

@@ -1,7 +1,7 @@
 {
   "name": "kovies-desktop",
   "productName": "Kovies",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "private": true,
   "description": "Kovies desktop shell (Electron) for the Kovies web app",
   "author": "Kovies",

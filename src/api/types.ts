@@ -122,10 +122,18 @@ export interface StreamingSource {
   };
 }
 
+/** Release cycle of a movie, sent with empty movie source lists. */
+export interface ReleaseWindow {
+  status: 'upcoming' | 'in_theaters' | 'streaming' | 'unknown';
+  theatricalDate: string | null;
+  digitalDate: string | null;
+}
+
 export interface SourcesResponse {
   tmdbId: number;
   mediaType: MediaType;
   sources: StreamingSource[];
+  releaseWindow?: ReleaseWindow;
 }
 
 export interface SubtitlesResponse {
