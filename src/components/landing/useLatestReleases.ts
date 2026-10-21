@@ -23,14 +23,14 @@ export interface PlatformDownloads {
 
 const FALLBACK_DOWNLOADS: PlatformDownloads = {
   tag: 'latest',
-  desktopVersion: 'v0.2.8',
-  androidVersion: 'v0.9.9',
-  windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.2.8-x64.exe',
-  windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.8-x64-portable.exe',
-  macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.8-arm64.dmg',
-  macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.8.dmg',
-  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v0.9.9.apk',
-  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v0.9.9.apk',
+  desktopVersion: 'v0.2.9',
+  androidVersion: 'v1.0.0',
+  windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.2.9-x64.exe',
+  windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.9-x64-portable.exe',
+  macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.9-arm64.dmg',
+  macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.9.dmg',
+  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v1.0.0.apk',
+  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v1.0.0.apk',
   isLoading: false,
 };
 
