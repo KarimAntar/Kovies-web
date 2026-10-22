@@ -130,7 +130,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
     {
       id: 'web',
       name: 'Kovies Web Player',
-      version: 'v1.0.0 Cloud',
+      version: `v${__APP_VERSION__} Cloud`,
       tag: 'Instant Browser Playback',
       requirements: 'Any modern browser (Chrome, Safari, Firefox, Edge)',
       icon: <Globe className="w-6 h-6 text-primary" />,
@@ -147,13 +147,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
       icon: <Zap className="w-6 h-6 text-primary" />,
       title: '4K Adaptive HLS Stream Relay',
       description:
-        'Custom multi-CDN failover and server-side signed relay for header-bound streams. Smooth, instant bitrate adaptation up to 4K 60fps.',
+        'Custom multi-CDN failover and server-side signed relay for header-bound streams. Auto quality adapts the bitrate to your connection, up to 4K.',
     },
     {
       icon: <SubtitlesIcon />,
       title: 'Dynamic SubDL & SubSource Subtitles',
       description:
-        'Automated multi-language subtitle resolution from SubDL. On-the-fly SRT to WebVTT conversion with collision-free player rendering.',
+        'Automated multi-language subtitle resolution from SubDL and SubSource. On-the-fly SRT to WebVTT conversion with collision-free player rendering.',
     },
     {
       icon: <Radio className="w-6 h-6 text-indigo-400" />,

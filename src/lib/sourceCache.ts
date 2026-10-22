@@ -25,10 +25,31 @@ export function qualityRank(quality?: string | null): number {
   return match ? Number(match[1]) : 0;
 }
 
-/** Highest quality first; equal ranks keep the backend's order. */
+/** True for the adaptive source (HLS master playlist) the API labels "Auto". */
+export function isAutoQuality(quality?: string | null): boolean {
+  return (quality ?? '').trim().toLowerCase() === 'auto';
+}
+
+/**
+ * Menu/badge label for a source. Auto appends the rendition hls.js is playing
+ * ("Auto · 1080p") once known; sources without a label read "Default".
+ */
+export function qualityLabel(quality?: string | null, playingHeight?: number | null): string {
+  if (isAutoQuality(quality)) {
+    if (!playingHeight || playingHeight <= 0) return 'Auto';
+    return `Auto · ${playingHeight >= 2160 ? '4K' : `${playingHeight}p`}`;
+  }
+  return quality?.trim() || 'Default';
+}
+
+/** Auto first, then highest quality; equal ranks keep the backend's order. */
 export function rankSources(list: StreamingSource[]): StreamingSource[] {
   return list
-    .map((source, index) => ({ source, index, rank: qualityRank(source.quality) }))
+    .map((source, index) => ({
+      source,
+      index,
+      rank: isAutoQuality(source.quality) ? Number.POSITIVE_INFINITY : qualityRank(source.quality),
+    }))
     .sort((a, b) => b.rank - a.rank || a.index - b.index)
     .map((entry) => entry.source);
 }

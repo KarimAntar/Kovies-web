@@ -2,6 +2,7 @@ import type { SubtitleStyle, SubSize, SubFont, SubColor, SubEdge } from '../../l
 import { DEFAULT_SUBTITLE_STYLE, SUBTITLE_COLORS, subtitleCss } from '../../lib/subtitleStyle';
 import React from 'react';
 import { useMenuFocus } from './useMenuFocus';
+import { qualityLabel } from '../../lib/sourceCache';
 
 const MenuSurface: React.FC<React.PropsWithChildren<{ label: string; className: string; onClose: () => void }>> = ({ label, className, onClose, children }) => {
   const ref = useMenuFocus(onClose);
@@ -306,6 +307,8 @@ interface SettingsMenuProps {
   onRate: (rate: number) => void;
   sources: StreamingSource[];
   currentIndex: number;
+  /** Rendition height playing now; labels the selected Auto entry ("Auto · 1080p"). */
+  playingHeight?: number | null;
   isPlayable: (source: StreamingSource) => boolean;
   onSource: (index: number) => void;
 }
@@ -316,6 +319,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onRate,
   sources,
   currentIndex,
+  playingHeight,
   isPlayable,
   onSource,
 }) => (
@@ -353,7 +357,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   selected ? 'bg-primary/20 text-primary-hover' : 'text-gray-300 hover:bg-surface-800'
                 }`}
               >
-                <span className="uppercase font-bold">{src.quality || 'Auto'}</span>
+                <span className="uppercase font-bold">{qualityLabel(src.quality, selected ? playingHeight : null)}</span>
                 <span className="text-[11px] text-gray-400 truncate pl-2">{src.server || src.provider}</span>
               </button>
             );

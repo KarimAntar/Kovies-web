@@ -25,7 +25,7 @@ import { createVttBlobUrl, srtToVtt } from '../../lib/srtToVtt';
 import { planPlayback, BROWSER_UNSUPPORTED_MESSAGE } from '../../lib/playback';
 import { parseVtt, activeCues, type VttCue } from '../../lib/vtt';
 import { fetchSkipSegments, type SkipSegments } from '../../lib/introdb';
-import { loadSources } from '../../lib/sourceCache';
+import { isAutoQuality, loadSources, qualityLabel } from '../../lib/sourceCache';
 import { groupSubtitles, playableSubtitles } from '../../lib/subtitles';
 import { desktop, isDesktop } from '../../platform';
 import { useWatchlist } from '../../context/WatchlistContext';
@@ -33,6 +33,9 @@ import { useProgressReporter } from './useProgressReporter';
 import { SettingsMenu, SubtitleMenu } from './PlayerMenus';
 
 const CONTROLS_IDLE_MS = 3000;
+// ABR tuning for the Auto (master playlist) source: estimate conservatively and
+// require more headroom before stepping up, so 4K/1080p only kick in when sustained.
+const HLS_CONFIG = { enableWorker: true, backBufferLength: 90, abrBandWidthFactor: 0.8, abrBandWidthUpFactor: 0.6 } as const;
 const SUBTITLE_PREF_KEY = 'kovies_subtitle_lang';
 const SUBTITLE_TITLE_KEY_PREFIX = 'kovies_sub_track:';
 
@@ -132,6 +135,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Set when a movie has no stream because it is still in (or not yet in) cinemas.
   const [releaseInfo, setReleaseInfo] = useState<ReleaseNoticeText | null>(null);
   const currentSource = sourceIndex >= 0 ? sources[sourceIndex] ?? null : null;
+  // Height of the rendition actually playing; shown as "Auto · 1080p" on the Auto source.
+  const [playingHeight, setPlayingHeight] = useState<number | null>(null);
 
   // Resume position (seconds) — taken once from Continue Watching.
   const pendingSeekRef = useRef<number | null>(null);
@@ -326,6 +331,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let hls: Hls | null = null;
     let networkRetries = 0;
     let mediaRecoveries = 0;
+    const adaptive = isAutoQuality(currentSource.quality);
+    setPlayingHeight(null);
+    // Native HLS / progressive: read the decoded size (hls.js reports levels below).
+    const onResize = () => {
+      if (!hls && video.videoHeight > 0) setPlayingHeight(video.videoHeight);
+    };
+    video.addEventListener('resize', onResize);
     setStreamError(null);
     setIsBuffering(true);
 
@@ -357,9 +369,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
 
       if (Hls.isSupported()) {
-        hls = new Hls({ enableWorker: true, backBufferLength: 90 });
+        hls = new Hls(HLS_CONFIG);
         hls.subtitleDisplay = false;
-        hls.on(Hls.Events.MANIFEST_PARSED, () => { playbackDiagnostics.record('manifest'); autoplay(); });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          playbackDiagnostics.record('manifest');
+          // Auto: leave level selection to hls.js ABR (-1 = automatic, never locked).
+          if (adaptive && hls) hls.currentLevel = -1;
+          autoplay();
+        });
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
+          const height = hls?.levels[data.level]?.height;
+          if (height) setPlayingHeight(height);
+        });
         hls.on(Hls.Events.FRAG_BUFFERED, () => playbackDiagnostics.record('fragment'));
         hls.on(Hls.Events.ERROR, (_evt, data) => {
           playbackDiagnostics.record('hls-error', { fatal: data.fatal });
@@ -396,6 +417,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       cancelled = true;
       listeners.forEach(remove => remove());
+      video.removeEventListener('resize', onResize);
       if (hls) {
         hls.destroy();
         hls = null;
@@ -1039,7 +1061,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
           {currentSource && (
             <span className="hidden sm:inline uppercase text-xs font-bold px-2.5 py-1 rounded-md bg-surface-800/80 border border-primary/40 text-primary-hover backdrop-blur-md">
-              {currentSource.quality || 'Auto'}
+              {qualityLabel(currentSource.quality, playingHeight)}
             </span>
           )}
         </div>
@@ -1156,6 +1178,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     onRate={changeRate}
                     sources={sources}
                     currentIndex={sourceIndex}
+                    playingHeight={playingHeight}
                     isPlayable={isPlayableHere}
                     onSource={switchSource}
                   />
