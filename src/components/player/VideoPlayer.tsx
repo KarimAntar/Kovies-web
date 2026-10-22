@@ -14,10 +14,8 @@ import {
   Settings,
   ArrowLeft,
   Loader2,
-  AlertTriangle,
   SkipForward,
   FastForward,
-  Clapperboard,
 } from 'lucide-react';
 import type { MediaItem, MediaType, ReleaseWindow, SourcesResponse, StreamingSource, SubtitleTrack } from '../../api/types';
 import { releaseNotice, type ReleaseNoticeText } from '../../lib/releaseNotice';
@@ -908,18 +906,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {streamError && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-surface-950/95 p-6">
-          <div role="alert" className="max-w-md text-center">
-            {releaseInfo ? (
-              <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary mb-4">
-                <Clapperboard className="w-8 h-8" />
-              </div>
-            ) : (
-              <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
-                <AlertTriangle className="w-8 h-8" />
-              </div>
-            )}
-            <h3 className="font-title text-xl font-bold text-white mb-2">{releaseInfo?.title ?? 'Playback unavailable'}</h3>
-            <p className="text-sm text-gray-300 mb-6 leading-relaxed">{typeof streamError === 'string' ? streamError : errorMessage(streamError, 'No streams currently available for this title.')}</p>
+          <div role="alert" className="max-w-lg text-center flex flex-col items-center">
+            <img
+              src="/kovies-symbol.png"
+              alt="Kovies"
+              className="w-16 h-16 mb-5 object-contain"
+            />
+            <h3 className="font-title text-2xl font-bold text-white mb-3">{releaseInfo?.title ?? 'Playback unavailable'}</h3>
+            <p className="text-sm text-gray-300 mb-6 leading-relaxed max-w-md mx-auto">{typeof streamError === 'string' ? streamError : errorMessage(streamError, 'No streams currently available for this title.')}</p>
             <div className="flex flex-wrap justify-center gap-3">
               {nextPlayableIndex >= 0 && (
                 <button
