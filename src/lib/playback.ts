@@ -34,9 +34,14 @@ function isHttpUrl(value: unknown): value is string {
   }
 }
 
+function isHttpsUrl(value: unknown): value is string {
+  return isHttpUrl(value) && new URL(value).protocol === 'https:';
+}
+
 /**
  * Decide which URL to hand to the player.
- * - Desktop: always the original URL; headers are registered with the main process.
+ * - Desktop: the backend relay URL when offered (it reads segments ahead, hiding slow
+ *   uncached provider segments); otherwise the original URL with headers registered.
  * - Web, source needs headers: the backend relay URL (absolute, signed); error if missing.
  * - Web, no headers: the original URL.
  */
@@ -44,6 +49,9 @@ export function planPlayback(source: StreamingSource, onDesktop: boolean): Playb
   const headers = nonEmptyHeaders(source);
 
   if (onDesktop) {
+    if (isHttpsUrl(source.relayUrl)) {
+      return { ok: true, url: source.relayUrl, registerHeaders: null, kind: streamKind(source, source.url) };
+    }
     if (!isHttpUrl(source.url)) return { ok: false, message: 'This source has an invalid stream URL.' };
     return { ok: true, url: source.url, registerHeaders: headers, kind: streamKind(source, source.url) };
   }

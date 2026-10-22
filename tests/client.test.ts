@@ -57,13 +57,25 @@ test('planPlayback respects web relayUrl and desktop header registration', () =>
     assert.equal(failPlan.message, BROWSER_UNSUPPORTED_MESSAGE);
   }
 
-  // Desktop -> always plays source.url and registers headers
+  // Desktop with relayUrl -> plays through the relay (read-ahead), no header registration
   const deskPlan = planPlayback(sourceWithHeaders, true);
   assert.equal(deskPlan.ok, true);
   if (deskPlan.ok) {
-    assert.equal(deskPlan.url, 'https://provider.stream/master.m3u8');
-    assert.deepEqual(deskPlan.registerHeaders, { Referer: 'https://stellar.gdn' });
+    assert.equal(deskPlan.url, 'https://kovies.kerix.tech/api/stream/signed123');
+    assert.equal(deskPlan.registerHeaders, null);
   }
+
+  // Desktop without relayUrl -> original URL with registered headers
+  const deskDirect = planPlayback(noRelay, true);
+  assert.equal(deskDirect.ok, true);
+  if (deskDirect.ok) {
+    assert.equal(deskDirect.url, 'https://provider.stream/master.m3u8');
+    assert.deepEqual(deskDirect.registerHeaders, { Referer: 'https://stellar.gdn' });
+  }
+
+  // Desktop never trusts a non-HTTPS relay
+  const deskInsecure = planPlayback({ ...sourceWithHeaders, relayUrl: 'http://evil.test/x' }, true);
+  assert.equal(deskInsecure.ok && deskInsecure.url, 'https://provider.stream/master.m3u8');
 
   // Clean stream (no headers) -> web plays direct URL
   const cleanSource: StreamingSource = {

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.11] - 2026-10-23
+### Features
+- Desktop plays sources through the Kovies API relay when one is offered, falling back to the direct URL with registered headers.
+### Design Rationale
+- stellar.rip serves uncached segments slowly (7–10 s to first byte) and intermittently returns HTTP 500. The relay now reads segments ahead and retries upstream failures, which hides those delays at 1080p.
+### Notes & Caveats
+- Only HTTPS relay URLs are accepted. 4K can still buffer when the home connection is slower than about 20 Mbps.
+
 ## [0.2.10] - 2026-10-22
 ### Features
 - Add keyboard-accessible player menus with focus restoration and outside-pointer dismissal that preserves playback and seek position.
