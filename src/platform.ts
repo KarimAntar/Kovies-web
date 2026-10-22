@@ -12,6 +12,7 @@ export interface KoviesDesktopBridge {
   /** e.g. 'https://kovies.kerix.tech/api' — main process injects the API key. */
   apiBase: string;
   registerStreamHeaders(streamUrl: string, headers: Record<string, string>): Promise<void>;
+  resolveStellar(request: { mediaType: 'movie' | 'tv'; tmdbId: number; season?: number; episode?: number }): Promise<string | null>;
   minimize(): void;
   toggleMaximize(): void;
   close(): void;

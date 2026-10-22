@@ -184,3 +184,24 @@ test('protocol rejects traversal, alternate streams and symlink escape; serves r
     await rm(temp, { recursive: true, force: true });
   }
 });
+
+const stellar = await load('main/stellarRip.ts', { BrowserWindow: class {}, session: {} });
+
+test('stellar.rip: only proxy master playlists count as stream links', () => {
+  assert.equal(stellar.isStreamUrl('https://proxy2.jordanblackwell.bid/playlist/abc.m3u8?e=1&s=x'), true);
+  for (const url of [
+    'https://proxy2.jordanblackwell.bid/playlist/abc/index-s1080p-v1-a1.m3u8',
+    'https://proxy2.jordanblackwell.bid.evil.example/playlist/abc.m3u8',
+    'http://proxy2.jordanblackwell.bid/playlist/abc.m3u8',
+    'https://evil.example/playlist/abc.m3u8',
+    'nope',
+  ]) assert.equal(stellar.isStreamUrl(url), false, url);
+});
+
+test('stellar.rip: requests are validated and map to embed pages', () => {
+  assert.equal(stellar.embedUrl('movie', 550), 'https://stellar.rip/en/watch/embed/movie/550?autoPlay=false');
+  assert.equal(stellar.embedUrl('tv', 1396, 1, 2), 'https://stellar.rip/en/watch/embed/tv/1396-1-2?autoPlay=false');
+  assert.deepEqual(stellar.validateRequest({ mediaType: 'movie', tmdbId: 550 }), { mediaType: 'movie', tmdbId: 550, season: undefined, episode: undefined });
+  for (const bad of [null, { mediaType: 'x', tmdbId: 1 }, { mediaType: 'movie', tmdbId: -1 }, { mediaType: 'movie', tmdbId: '550' }, { mediaType: 'tv', tmdbId: 1 }])
+    assert.throws(() => stellar.validateRequest(bad));
+});

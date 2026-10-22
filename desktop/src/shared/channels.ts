@@ -3,6 +3,7 @@
 
 export const IPC = {
   registerStreamHeaders: 'kovies:stream-headers:register',
+  resolveStellar: 'kovies:stellar:resolve',
   windowMinimize: 'kovies:window:minimize',
   windowToggleMaximize: 'kovies:window:toggle-maximize',
   windowClose: 'kovies:window:close',

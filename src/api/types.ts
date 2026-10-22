@@ -129,10 +129,18 @@ export interface ReleaseWindow {
   digitalDate: string | null;
 }
 
+export interface SourceIssue {
+  provider: string;
+  code: string;
+  message: string;
+  embedUrl?: string;
+}
+
 export interface SourcesResponse {
   tmdbId: number;
   mediaType: MediaType;
   sources: StreamingSource[];
+  issues?: SourceIssue[];
   releaseWindow?: ReleaseWindow;
 }
 

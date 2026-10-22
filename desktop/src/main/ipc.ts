@@ -4,6 +4,7 @@ import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } fr
 import { IPC, isAppUrl } from '../shared/channels';
 import { log } from './log';
 import { StreamHeaderError, validateRegistration, type StreamHeaderStore } from './streamHeaders';
+import { resolveStellarLink, validateRequest } from './stellarRip';
 import type { UpdateManager } from './updater';
 
 function trustedWindow(event: IpcMainEvent | IpcMainInvokeEvent): BrowserWindow | null {
@@ -24,6 +25,11 @@ export function registerIpc(streams: StreamHeaderStore, updater?: UpdateManager)
       if (err instanceof StreamHeaderError) throw new Error(err.message);
       throw err;
     }
+  });
+
+  ipcMain.handle(IPC.resolveStellar, async (event, request: unknown) => {
+    if (!trustedWindow(event)) throw new Error('untrusted sender');
+    return resolveStellarLink(validateRequest(request));
   });
 
   ipcMain.handle(IPC.windowIsMaximized, (event) => trustedWindow(event)?.isMaximized() ?? false);

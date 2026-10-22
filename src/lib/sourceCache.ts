@@ -8,6 +8,7 @@
  */
 import { api } from '../api/client';
 import type { SourcesResponse, StreamingSource } from '../api/types';
+import { desktop } from '../platform';
 
 const TTL_MS = 5 * 60_000;
 
@@ -42,13 +43,64 @@ export function loadSources(
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.promise;
 
-  const request = type === 'tv'
-    ? api.getTVEpisodeSources(tmdbId, season ?? 1, episode ?? 1)
-    : api.getMovieSources(tmdbId);
-  const promise = request.then((res) => ({
-    ...res,
-    sources: rankSources(Array.isArray(res?.sources) ? res.sources : []),
-  }));
+  const fetchSources = async (): Promise<SourcesResponse> => {
+    const res = type === 'tv'
+      ? await api.getTVEpisodeSources(tmdbId, season ?? 1, episode ?? 1)
+      : await api.getMovieSources(tmdbId);
+
+    // If sources exist or we are not in desktop, return as-is
+    if ((res.sources && res.sources.length > 0) || !desktop?.resolveStellar) {
+      return {
+        ...res,
+        sources: rankSources(Array.isArray(res?.sources) ? res.sources : []),
+      };
+    }
+
+    // Check if stellarrip needs device resolve
+    const needsResolve = res.issues?.some((i) => i.code === 'NEEDS_DEVICE_RESOLVE');
+    if (!needsResolve) {
+      return {
+        ...res,
+        sources: rankSources(Array.isArray(res?.sources) ? res.sources : []),
+      };
+    }
+
+    try {
+      const link = await desktop.resolveStellar({
+        mediaType: type,
+        tmdbId,
+        season,
+        episode,
+      });
+
+      if (link) {
+        await api.submitStellarLink({
+          mediaType: type,
+          tmdbId,
+          season,
+          episode,
+          url: link,
+        });
+        // Refetch sources after submitting resolved link
+        const refetched = type === 'tv'
+          ? await api.getTVEpisodeSources(tmdbId, season ?? 1, episode ?? 1)
+          : await api.getMovieSources(tmdbId);
+        return {
+          ...refetched,
+          sources: rankSources(Array.isArray(refetched?.sources) ? refetched.sources : []),
+        };
+      }
+    } catch {
+      // Fallback to original response on resolver error
+    }
+
+    return {
+      ...res,
+      sources: rankSources(Array.isArray(res?.sources) ? res.sources : []),
+    };
+  };
+
+  const promise = fetchSources();
   cache.set(key, { at: Date.now(), promise });
   promise.catch(() => {
     if (cache.get(key)?.promise === promise) cache.delete(key);

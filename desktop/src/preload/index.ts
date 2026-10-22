@@ -10,6 +10,8 @@ interface KoviesDesktopBridge {
   platform: Platform;
   apiBase: string;
   registerStreamHeaders(streamUrl: string, headers: Record<string, string>): Promise<void>;
+  /** Look up a stellar.rip stream link on this computer; null when it has none. */
+  resolveStellar(request: { mediaType: 'movie' | 'tv'; tmdbId: number; season?: number; episode?: number }): Promise<string | null>;
   minimize(): void;
   toggleMaximize(): void;
   close(): void;
@@ -48,6 +50,10 @@ const bridge: KoviesDesktopBridge = {
   apiBase: API_BASE,
   async registerStreamHeaders(streamUrl, headers) {
     await ipcRenderer.invoke(IPC.registerStreamHeaders, streamUrl, headers);
+  },
+  resolveStellar: async (request) => {
+    const link = await ipcRenderer.invoke(IPC.resolveStellar, request);
+    return typeof link === 'string' ? link : null;
   },
   minimize: () => ipcRenderer.send(IPC.windowMinimize),
   toggleMaximize: () => ipcRenderer.send(IPC.windowToggleMaximize),

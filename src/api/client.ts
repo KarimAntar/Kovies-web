@@ -214,6 +214,13 @@ export const api = {
     return request(`search${qs({ q: query, page })}`, { signal });
   },
 
+  submitStellarLink(payload: { mediaType: "movie" | "tv"; tmdbId: number; season?: number; episode?: number; url: string }): Promise<{ ok: boolean }> {
+    return request("sources/stellarrip", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
   getMovieSources(tmdbId: number, signal?: AbortSignal): Promise<SourcesResponse> {
     return request(`sources/movie/${id(tmdbId)}`, { signal });
   },
