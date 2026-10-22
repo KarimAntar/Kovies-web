@@ -1,6 +1,12 @@
 import type { SubtitleStyle, SubSize, SubFont, SubColor, SubEdge } from '../../lib/subtitleStyle';
 import { DEFAULT_SUBTITLE_STYLE, SUBTITLE_COLORS, subtitleCss } from '../../lib/subtitleStyle';
 import React from 'react';
+import { useMenuFocus } from './useMenuFocus';
+
+const MenuSurface: React.FC<React.PropsWithChildren<{ label: string; className: string; onClose: () => void }>> = ({ label, className, onClose, children }) => {
+  const ref = useMenuFocus(onClose);
+  return <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={label} className={className}>{children}</div>;
+};
 import { Check } from 'lucide-react';
 import type { StreamingSource, SubtitleTrack } from '../../api/types';
 import type { SubtitleGroup } from '../../lib/subtitles';
@@ -11,6 +17,7 @@ const itemBase =
   'w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-medium text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
 interface SubtitleMenuProps {
+  onClose: () => void;
   groups: SubtitleGroup[];
   activeUrl: string | null;
   loading: boolean;
@@ -36,6 +43,7 @@ const EDGES: SubEdge[] = ['NONE', 'SHADOW', 'OUTLINE', 'RAISED'];
 const BACKGROUNDS = [0, 0.25, 0.5, 0.75, 1.0];
 
 export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
+  onClose,
   groups,
   activeUrl,
   loading,
@@ -47,7 +55,7 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
   style,
   onStyleChange,
 }) => (
-  <div role="menu" aria-label="Subtitles" className={`${menuShell} w-80 max-h-[70vh]`}>
+  <MenuSurface onClose={onClose} label="Subtitles" className={`${menuShell} w-80 max-w-[calc(100vw-2rem)] max-h-[70vh]`}>
     <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-surface-800 flex items-center justify-between">
       <span>Subtitles</span>
       {loading && <span className="normal-case font-medium text-primary-hover">Loading…</span>}
@@ -289,10 +297,11 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
         })}
       </div>
     ))}
-  </div>
+  </MenuSurface>
 );
 
 interface SettingsMenuProps {
+  onClose: () => void;
   playbackRate: number;
   onRate: (rate: number) => void;
   sources: StreamingSource[];
@@ -302,6 +311,7 @@ interface SettingsMenuProps {
 }
 
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
+  onClose,
   playbackRate,
   onRate,
   sources,
@@ -309,7 +319,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   isPlayable,
   onSource,
 }) => (
-  <div role="menu" aria-label="Playback settings" className={`${menuShell} w-64 max-h-[60vh] p-3 space-y-3`}>
+  <MenuSurface onClose={onClose} label="Playback settings" className={`${menuShell} w-64 max-w-[calc(100vw-2rem)] max-h-[60vh] p-3 space-y-3`}>
     <div>
       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Speed</div>
       <div className="grid grid-cols-3 gap-1">
@@ -351,5 +361,5 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
         </div>
       </div>
     )}
-  </div>
+  </MenuSurface>
 );

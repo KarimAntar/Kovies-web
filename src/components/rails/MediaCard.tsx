@@ -1,4 +1,26 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { clampPopup } from '../../lib/menuInteraction';
+import { useMenuFocus } from '../player/useMenuFocus';
+
+const ProgressMenu: React.FC<{ x: number; y: number; onClose: () => void; onClear: (event: React.MouseEvent) => void }> = ({ x, y, onClose, onClear }) => {
+  const ref = useMenuFocus(onClose);
+  const [position, setPosition] = useState({ left: x, top: y });
+  useLayoutEffect(() => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect) setPosition(clampPopup(x, y, rect.width, rect.height, window.innerWidth, window.innerHeight));
+    window.addEventListener('resize', onClose);
+    window.addEventListener('scroll', onClose, true);
+    return () => { window.removeEventListener('resize', onClose); window.removeEventListener('scroll', onClose, true); };
+  }, [x, y, onClose, ref]);
+  return createPortal(<div ref={ref} role="menu" aria-label="Watch progress" tabIndex={-1}
+    onClick={event => event.stopPropagation()} onContextMenu={event => event.preventDefault()}
+    style={{ ...position, maxWidth: 'calc(100vw - 16px)', maxHeight: 'calc(100vh - 16px)' }}
+    className="fixed z-[100] w-44 overflow-auto rounded-xl border border-white/15 bg-surface-900 p-1.5 shadow-2xl">
+    <button role="menuitem" className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 hover:bg-surface-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+      onClick={event => { onClear(event); onClose(); }}>Clear Progress</button>
+  </div>, document.body);
+};
 import { Play, Plus, Check, Star, Info, X } from 'lucide-react';
 import type { MediaItem, WatchHistoryItem } from '../../api/types';
 import { firstImage, FALLBACK_POSTER } from '../../lib/images';
@@ -20,6 +42,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   onRemoveHistory,
 }) => {
   const { inWatchlist, toggleWatchlist, removeFromHistory } = useWatchlist();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const closeMenu = React.useCallback(() => setMenu(null), []);
   const tmdbId = item.tmdbId || item.id;
   const mediaType = item.type || item.media_type || 'movie';
   const isSaved = inWatchlist(tmdbId, mediaType);
@@ -70,9 +95,28 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
   return (
     <div
-      onClick={() => onSelect(item)}
+      ref={cardRef}
+      tabIndex={0}
+      aria-haspopup={historyItem ? 'menu' : undefined}
+      aria-expanded={historyItem ? menu !== null : undefined}
+      onContextMenu={event => {
+        if (!historyItem) return;
+        event.preventDefault(); event.stopPropagation(); cardRef.current?.focus();
+        const rect = event.currentTarget.getBoundingClientRect();
+        setMenu({ x: event.clientX || rect.left, y: event.clientY || rect.bottom });
+      }}
+      onKeyDown={event => {
+        if (event.target !== event.currentTarget) return;
+        if (historyItem && (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) {
+          event.preventDefault(); event.stopPropagation();
+          const rect = event.currentTarget.getBoundingClientRect();
+          setMenu({ x: rect.left, y: rect.bottom });
+        } else if (event.key === 'Enter' && !menu) onSelect(item);
+      }}
+      onClick={() => { if (!menu) onSelect(item); }}
       className="group relative flex-shrink-0 w-44 sm:w-52 md:w-56 cursor-pointer select-none transition-all duration-300"
     >
+      {menu && <ProgressMenu {...menu} onClose={closeMenu} onClear={handleRemoveHistoryClick} />}
       {/* Poster Container */}
       <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-surface-850/90 border border-white/10 shadow-xl group-hover:shadow-[0_0_25px_rgba(123,91,245,0.45)] group-hover:border-white transition-all duration-200 transform group-hover:scale-[1.08] ring-0 group-hover:ring-2 group-hover:ring-white z-0 group-hover:z-10">
         <img

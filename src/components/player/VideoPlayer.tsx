@@ -1,6 +1,7 @@
 import { loadSubtitleStyle, saveSubtitleStyle, subtitleCss, subtitleLiftVh, type SubtitleStyle } from '../../lib/subtitleStyle';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import { playbackDiagnostics } from '../../lib/playbackDiagnostics';
 import {
   Play,
   Pause,
@@ -314,6 +315,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return;
     }
 
+    playbackDiagnostics.record('source');
+    const diagnosticEvents = ['loadedmetadata', 'waiting', 'stalled', 'playing', 'error', 'ended'] as const;
+    const listeners = diagnosticEvents.map(event => {
+      const listener = () => playbackDiagnostics.record(event, { readyState: video.readyState, networkState: video.networkState, code: video.error?.code });
+      video.addEventListener(event, listener);
+      return () => video.removeEventListener(event, listener);
+    });
     let cancelled = false;
     let hls: Hls | null = null;
     let networkRetries = 0;
@@ -351,8 +359,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (Hls.isSupported()) {
         hls = new Hls({ enableWorker: true, backBufferLength: 90 });
         hls.subtitleDisplay = false;
-        hls.on(Hls.Events.MANIFEST_PARSED, autoplay);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { playbackDiagnostics.record('manifest'); autoplay(); });
+        hls.on(Hls.Events.FRAG_BUFFERED, () => playbackDiagnostics.record('fragment'));
         hls.on(Hls.Events.ERROR, (_evt, data) => {
+          playbackDiagnostics.record('hls-error', { fatal: data.fatal });
           if (!data.fatal || !hls) return;
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR && networkRetries < 2) {
             networkRetries += 1;
@@ -385,6 +395,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     return () => {
       cancelled = true;
+      listeners.forEach(remove => remove());
       if (hls) {
         hls.destroy();
         hls = null;
@@ -682,6 +693,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const tag = target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
       const a = actionsRef.current;
+      if (e.defaultPrevented || a.openMenu) return;
       const video = videoRef.current;
       switch (e.key) {
         case ' ':
@@ -1110,6 +1122,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </ControlButton>
                 {openMenu === 'subtitles' && (
                   <SubtitleMenu
+                    onClose={() => setOpenMenu(null)}
                     groups={subtitleGroups}
                     activeUrl={activeSubtitle?.url ?? null}
                     loading={subtitleLoading}
@@ -1138,6 +1151,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </ControlButton>
                 {openMenu === 'settings' && (
                   <SettingsMenu
+                    onClose={() => setOpenMenu(null)}
                     playbackRate={playbackRate}
                     onRate={changeRate}
                     sources={sources}
