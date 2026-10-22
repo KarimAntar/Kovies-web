@@ -579,9 +579,14 @@ function MainApp() {
             ) : null}
 
             {/* Rails Container */}
-            <div className="space-y-6 mt-2 relative z-20">
-              {/* Browse by Genre chips — right under hero */}
-              <section aria-label="Browse by Genre" className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-2">
+            <div className="space-y-4 mt-1 relative z-20">
+              {/* Browse by Provider / Platform — Right under spotlight */}
+              <div className="pt-3">
+                <ProviderRow providers={homeData?.providers} onSelect={openProvider} />
+              </div>
+
+              {/* Browse by Genre chips */}
+              <section aria-label="Browse by Genre" className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-1">
                 <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1">
                   <button
                     type="button"
@@ -687,10 +692,7 @@ function MainApp() {
                 />
               )}
 
-              {/* Browse by Platform (Stitch 2.0 layout) */}
-              <div className="pt-2">
-                <ProviderRow providers={homeData?.providers} onSelect={openProvider} />
-              </div>
+
 
               {/* Popular Movies Rail */}
               {homeData?.popularMovies && (
