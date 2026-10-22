@@ -42,7 +42,7 @@ export const ProviderRow: React.FC<ProviderRowProps> = ({ providers, activeId, o
 
   return (
     <section aria-label="Browse by Provider" className="w-full px-4 sm:px-8 md:px-12 lg:px-16">
-      <h2 className="font-title text-base sm:text-lg font-bold text-white mb-3">Browse by Provider</h2>
+      <h2 className="font-title text-base sm:text-lg font-bold text-white mb-3">Browse by Platform</h2>
       <div className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
         {displayProviders.map((provider) => {
           const active = provider.id === activeId;
@@ -54,32 +54,21 @@ export const ProviderRow: React.FC<ProviderRowProps> = ({ providers, activeId, o
               aria-label={`Browse ${provider.name}`}
               aria-pressed={active}
               title={provider.name}
-              className="group shrink-0 flex flex-col items-center gap-2 w-[72px] sm:w-20 focus:outline-none"
+              className={`group shrink-0 w-32 sm:w-36 h-16 sm:h-18 rounded-2xl p-2.5 bg-surface-800/90 border flex items-center justify-center transition-all duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                active ? 'border-primary shadow-[0_0_15px_rgba(123,91,245,0.5)]' : 'border-white/10 hover:border-white/30'
+              }`}
             >
-              <span
-                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-surface-800 flex items-center justify-center border transition-all duration-200 group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-primary ${
-                  active ? 'border-primary shadow-[0_0_0_2px_rgba(123,91,245,0.5)]' : 'border-white/10 group-hover:border-white/30'
-                }`}
-              >
-                {provider.logo ? (
-                  <img
-                    src={provider.logo}
-                    alt=""
-                    loading="lazy"
-                    draggable={false}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-white/80">{provider.name.slice(0, 2)}</span>
-                )}
-              </span>
-              <span
-                className={`text-[11px] leading-tight text-center line-clamp-2 transition-colors ${
-                  active ? 'text-white font-semibold' : 'text-gray-400 group-hover:text-white'
-                }`}
-              >
-                {provider.name}
-              </span>
+              {provider.logo ? (
+                <img
+                  src={provider.logo}
+                  alt={provider.name}
+                  loading="lazy"
+                  draggable={false}
+                  className="max-h-full max-w-full object-contain filter brightness-95 group-hover:brightness-110 transition-all"
+                />
+              ) : (
+                <span className="text-sm font-bold text-white/90">{provider.name}</span>
+              )}
             </button>
           );
         })}

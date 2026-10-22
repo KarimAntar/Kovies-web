@@ -579,16 +579,23 @@ function MainApp() {
             ) : null}
 
             {/* Rails Container */}
-            <div className="space-y-2 mt-0 relative z-20">
-              {/* Browse by Provider */}
-              <div className="pt-4">
-                <ProviderRow providers={homeData?.providers} onSelect={openProvider} />
-              </div>
-
-              {/* Browse by Genre — opens Discover filtered to the genre */}
-              <section aria-label="Browse by Genre" className="w-full px-4 sm:px-8 md:px-12 lg:px-16">
-                <h2 className="font-title text-base sm:text-lg font-bold text-white mb-3">Browse by Genre</h2>
-                <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-2">
+            <div className="space-y-6 mt-2 relative z-20">
+              {/* Browse by Genre chips — right under hero */}
+              <section aria-label="Browse by Genre" className="w-full px-4 sm:px-8 md:px-12 lg:px-16 pt-2">
+                <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGenre('all');
+                    }}
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+                      selectedGenre === 'all'
+                        ? 'bg-primary text-white shadow-[0_0_15px_rgba(123,91,245,0.45)] ring-1 ring-white/20'
+                        : 'bg-surface-800/80 hover:bg-surface-700 text-gray-300 hover:text-white border border-white/5'
+                    }`}
+                  >
+                    All
+                  </button>
                   {GENRES.filter((g) => g !== 'all').map((genre) => (
                     <button
                       key={genre}
@@ -598,7 +605,7 @@ function MainApp() {
                         setGenreReloadTick((n) => n + 1);
                         setActiveTab('discover');
                       }}
-                      className="shrink-0 px-4 py-2 rounded-full bg-surface-800 hover:bg-primary/30 border border-white/10 text-sm text-gray-200 hover:text-white transition-colors"
+                      className="shrink-0 px-4 py-1.5 rounded-full bg-surface-800/80 hover:bg-primary/25 border border-white/5 text-xs sm:text-sm font-medium text-gray-300 hover:text-white transition-colors"
                     >
                       {genre}
                     </button>
@@ -679,6 +686,11 @@ function MainApp() {
                   }}
                 />
               )}
+
+              {/* Browse by Platform (Stitch 2.0 layout) */}
+              <div className="pt-2">
+                <ProviderRow providers={homeData?.providers} onSelect={openProvider} />
+              </div>
 
               {/* Popular Movies Rail */}
               {homeData?.popularMovies && (
