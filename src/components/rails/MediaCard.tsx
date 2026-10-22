@@ -74,7 +74,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       className="group relative flex-shrink-0 w-44 sm:w-52 md:w-56 cursor-pointer select-none transition-all duration-300"
     >
       {/* Poster Container */}
-      <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-surface-850/90 border border-surface-700/60 shadow-xl group-hover:shadow-2xl group-hover:shadow-primary/25 group-hover:border-primary/60 transition-all duration-300 transform group-hover:-translate-y-2 ring-0 group-hover:ring-1 group-hover:ring-primary/40">
+      <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden bg-surface-850/90 border border-white/10 shadow-xl group-hover:shadow-[0_0_25px_rgba(123,91,245,0.45)] group-hover:border-white transition-all duration-200 transform group-hover:scale-[1.08] ring-0 group-hover:ring-2 group-hover:ring-white z-0 group-hover:z-10">
         <img
           src={posterUrl}
           alt={title}

@@ -28,8 +28,10 @@ export default {
         }
       },
       fontFamily: {
-        title: ['"Plus Jakarta Sans"', 'sans-serif'],
-        sans: ['"Inter"', 'sans-serif'],
+        title: ['"Manrope"', '"Plus Jakarta Sans"', 'sans-serif'],
+        sans: ['"Manrope"', '"Inter"', 'sans-serif'],
+        manrope: ['"Manrope"', 'sans-serif'],
+        inter: ['"Inter"', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.25s ease-out forwards',
