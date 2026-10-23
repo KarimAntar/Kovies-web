@@ -24,13 +24,13 @@ export interface PlatformDownloads {
 const FALLBACK_DOWNLOADS: PlatformDownloads = {
   tag: 'latest',
   desktopVersion: 'v0.2.12',
-  androidVersion: 'v1.2.1',
+  androidVersion: 'v1.2.2',
   windowsSetup: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-Setup-0.2.12-x64.exe',
   windowsPortable: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.12-x64-portable.exe',
   macArm64: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.12-arm64.dmg',
   macIntel: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/Kovies-0.2.12.dmg',
-  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v1.2.1.apk',
-  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v1.2.1.apk',
+  androidApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-mobile-v1.2.2.apk',
+  androidTvApk: 'https://github.com/KarimAntar/Kovies-web/releases/latest/download/kovies-tv-v1.2.2.apk',
   isLoading: false,
 };
 
