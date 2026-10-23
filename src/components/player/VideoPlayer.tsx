@@ -1156,7 +1156,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     }
                     onSelect={(track) => {
                       selectSubtitle(track);
-                      setOpenMenu(null);
                     }}
                     style={subStyle}
                     onStyleChange={handleStyleChange}
