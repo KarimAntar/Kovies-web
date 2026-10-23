@@ -8,7 +8,7 @@ const MenuSurface: React.FC<React.PropsWithChildren<{ label: string; className: 
   const ref = useMenuFocus(onClose);
   return <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={label} className={className}>{children}</div>;
 };
-import { Check } from 'lucide-react';
+import { Check, ChevronLeft, SlidersHorizontal } from 'lucide-react';
 import type { StreamingSource, SubtitleTrack } from '../../api/types';
 import type { SubtitleGroup } from '../../lib/subtitles';
 
@@ -55,256 +55,283 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
   onSelect,
   style,
   onStyleChange,
-}) => (
-  <MenuSurface onClose={onClose} label="Subtitles" className={`${menuShell} w-80 max-w-[calc(100vw-2rem)] max-h-[75vh] flex flex-col p-0 overflow-hidden`}>
-    <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-surface-800 flex items-center justify-between shrink-0">
-      <span>Subtitles</span>
-      {loading && <span className="normal-case font-medium text-primary-hover">Loading…</span>}
-    </div>
+}) => {
+  const [view, setView] = React.useState<'tracks' | 'style'>('tracks');
 
-    <div className="overflow-y-auto max-h-[32vh] px-2 pt-1 border-b border-surface-800 shrink-0">
-    {/* Subtitle Sync Offset Adjuster */}
-    {activeUrl && (
-      <div className="px-3 py-2 border-b border-surface-800/80 bg-surface-950/40 rounded-xl my-1.5">
-        <div className="flex items-center justify-between text-[11px] font-semibold text-gray-300 mb-1.5">
-          <span>Sync Offset</span>
-          <span className="font-mono text-primary-hover">{offsetSec > 0 ? `+${offsetSec.toFixed(2)}s` : `${offsetSec.toFixed(2)}s`}</span>
-        </div>
-        <div className="flex items-center justify-between gap-1.5">
-          <button
-            type="button"
-            onClick={() => onOffsetChange(-0.5)}
-            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
-          >
-            -0.5s
-          </button>
-          <button
-            type="button"
-            onClick={() => onOffsetChange(-0.25)}
-            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
-          >
-            -0.25s
-          </button>
-          <button
-            type="button"
-            onClick={() => onOffsetChange(0)}
-            disabled={offsetSec === 0}
-            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-400 hover:text-white disabled:opacity-40 transition-colors"
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={() => onOffsetChange(0.25)}
-            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
-          >
-            +0.25s
-          </button>
-          <button
-            type="button"
-            onClick={() => onOffsetChange(0.5)}
-            className="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
-          >
-            +0.5s
-          </button>
-        </div>
-      </div>
-    )}
-
-    {/* Style Section */}
-    <div className="px-3 py-2 border-b border-surface-800/80 bg-surface-950/40 rounded-xl my-1.5 space-y-2.5">
-      <div className="flex items-center justify-between text-[11px] font-semibold text-gray-300">
-        <span className="uppercase tracking-wider text-gray-400">Subtitle Style</span>
-        <button
-          type="button"
-          onClick={() => onStyleChange(DEFAULT_SUBTITLE_STYLE)}
-          className="text-[10px] text-gray-400 hover:text-white transition-colors"
-        >
-          Reset to defaults
-        </button>
-      </div>
-
-      {/* Live preview line */}
-      <div className="p-2 rounded-lg bg-black/60 flex items-center justify-center min-h-[44px] overflow-hidden text-center">
-        <span style={subtitleCss(style)} className="kovies-subtitle !max-w-full">
-          This is how subtitles will look.
-        </span>
-      </div>
-
-      {/* Size segmented */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400 text-[11px]">Size</span>
-        <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
-          {SIZES.map((sz) => (
-            <button
-              key={sz}
-              type="button"
-              onClick={() => onStyleChange({ ...style, size: sz })}
-              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
-                style.size === sz ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {sz}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Font chips */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400 text-[11px]">Font</span>
-        <div className="flex flex-wrap gap-1 justify-end max-w-[200px]">
-          {FONTS.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              style={{ fontFamily: f.family }}
-              onClick={() => onStyleChange({ ...style, font: f.id })}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-all ${
-                style.font === f.id
-                  ? 'bg-primary/20 text-primary-hover ring-1 ring-primary'
-                  : 'bg-surface-800 text-gray-300 hover:text-white'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Colour swatches */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400 text-[11px]">Colour</span>
-        <div className="flex items-center gap-2">
-          {COLORS.map((col) => {
-            const hex = SUBTITLE_COLORS[col];
-            const isSelected = style.color === col;
-            return (
-              <button
-                key={col}
-                type="button"
-                onClick={() => onStyleChange({ ...style, color: col })}
-                className={`w-5 h-5 rounded-full transition-transform ${
-                  isSelected ? 'ring-2 ring-primary scale-110' : 'ring-1 ring-white/20 hover:scale-105'
-                }`}
-                style={{ backgroundColor: hex }}
-                title={col}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Edge segmented */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400 text-[11px]">Edge</span>
-        <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
-          {EDGES.map((ed) => (
-            <button
-              key={ed}
-              type="button"
-              onClick={() => onStyleChange({ ...style, edge: ed })}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
-                style.edge === ed ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {ed === 'NONE' ? 'None' : ed === 'SHADOW' ? 'Shadow' : ed === 'OUTLINE' ? 'Outline' : 'Raised'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Background segmented */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400 text-[11px]">Background</span>
-        <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
-          {BACKGROUNDS.map((bg) => (
-            <button
-              key={bg}
-              type="button"
-              onClick={() => onStyleChange({ ...style, background: bg })}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
-                Math.abs(style.background - bg) < 0.05 ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {bg === 0 ? 'Off' : `${Math.round(bg * 100)}%`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Position buttons */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400 text-[11px]">Position</span>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            disabled={style.position <= -2}
-            onClick={() => onStyleChange({ ...style, position: Math.max(-2, style.position - 1) })}
-            className="w-6 h-6 rounded bg-surface-800 hover:bg-surface-700 disabled:opacity-30 text-xs font-bold text-gray-200 flex items-center justify-center transition-colors"
-          >
-            −
-          </button>
-          <span className="w-8 text-center font-mono text-[11px] text-primary-hover">
-            {style.position > 0 ? `+${style.position}` : `${style.position}`}
-          </span>
-          <button
-            type="button"
-            disabled={style.position >= 4}
-            onClick={() => onStyleChange({ ...style, position: Math.min(4, style.position + 1) })}
-            className="w-6 h-6 rounded bg-surface-800 hover:bg-surface-700 disabled:opacity-30 text-xs font-bold text-gray-200 flex items-center justify-center transition-colors"
-          >
-            +
-          </button>
-        </div>
-      </div>
-    </div>
-
-    </div>
-
-    <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
-    {error && <p className="px-3 py-2 text-xs text-red-400">{error}</p>}
-    <button
-      role="menuitemradio"
-      aria-checked={!activeUrl}
-      onClick={() => onSelect(null)}
-      className={`${itemBase} mt-1 ${!activeUrl ? 'bg-primary/20 text-primary-hover' : 'text-gray-300 hover:bg-surface-800'}`}
+  return (
+    <MenuSurface
+      onClose={onClose}
+      label="Subtitles"
+      className={`${menuShell} w-80 max-w-[calc(100vw-2rem)] max-h-[75vh] flex flex-col p-0 overflow-hidden`}
     >
-      <span>Off</span>
-      {!activeUrl && <Check className="w-3.5 h-3.5" />}
-    </button>
-    {listLoading && groups.length === 0 && (
-      <p className="px-3 py-2 text-xs text-gray-400">Finding subtitles…</p>
-    )}
-    {!listLoading && groups.length === 0 && (
-      <p className="px-3 py-2 text-xs text-gray-400">No subtitles available for this title.</p>
-    )}
-    {groups.map((group) => (
-      <div key={group.language} className="mt-2">
-        <div className="px-3 py-1 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-          {group.label} <span className="font-medium normal-case">({group.tracks.length})</span>
-        </div>
-        {group.tracks.map((track, i) => {
-          const selected = activeUrl === track.url;
-          return (
-            <button
-              key={track.url}
-              role="menuitemradio"
-              aria-checked={selected}
-              onClick={() => onSelect(track)}
-              title={track.release || track.label}
-              className={`${itemBase} ${selected ? 'bg-primary/20 text-primary-hover' : 'text-gray-300 hover:bg-surface-800'}`}
-            >
-              <span className="truncate">{track.label || track.release || `${group.label} ${i + 1}`}</span>
-              {selected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-            </button>
-          );
-        })}
+      {/* Header with Navigation */}
+      <div className="px-3 py-2.5 text-xs font-bold text-gray-300 uppercase tracking-wider border-b border-surface-800 flex items-center justify-between shrink-0 bg-surface-950/40">
+        {view === 'style' ? (
+          <button
+            type="button"
+            onClick={() => setView('tracks')}
+            className="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4 text-primary-hover" />
+            <span>Subtitle Appearance</span>
+          </button>
+        ) : (
+          <div className="flex items-center justify-between w-full">
+            <span>Subtitles</span>
+            <div className="flex items-center gap-3">
+              {loading && <span className="normal-case font-medium text-primary-hover text-[11px]">Loading…</span>}
+              <button
+                type="button"
+                onClick={() => setView('style')}
+                className="flex items-center gap-1 normal-case font-medium text-[11px] text-gray-400 hover:text-primary-hover transition-colors"
+                title="Style & Appearance"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Style</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    ))}
-    </div>
-  </MenuSurface>
-);
+
+      {view === 'style' ? (
+        /* Sub-menu 2: Appearance & Styling */
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div className="flex items-center justify-between text-[11px] font-semibold text-gray-300">
+            <span className="uppercase tracking-wider text-gray-400">Preview</span>
+            <button
+              type="button"
+              onClick={() => onStyleChange(DEFAULT_SUBTITLE_STYLE)}
+              className="text-[10px] text-gray-400 hover:text-white transition-colors"
+            >
+              Reset to defaults
+            </button>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-black/60 flex items-center justify-center min-h-[50px] overflow-hidden text-center border border-white/5">
+            <span style={subtitleCss(style)} className="kovies-subtitle !max-w-full">
+              This is how subtitles will look.
+            </span>
+          </div>
+
+          {/* Size */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 text-[11px]">Size</span>
+            <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
+              {SIZES.map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => onStyleChange({ ...style, size: sz })}
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                    style.size === sz ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Font */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 text-[11px]">Font</span>
+            <div className="flex flex-wrap gap-1 justify-end max-w-[200px]">
+              {FONTS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  style={{ fontFamily: f.family }}
+                  onClick={() => onStyleChange({ ...style, font: f.id })}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-all ${
+                    style.font === f.id
+                      ? 'bg-primary/20 text-primary-hover ring-1 ring-primary'
+                      : 'bg-surface-800 text-gray-300 hover:text-white'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Colour */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 text-[11px]">Colour</span>
+            <div className="flex items-center gap-2">
+              {COLORS.map((col) => {
+                const hex = SUBTITLE_COLORS[col];
+                const isSelected = style.color === col;
+                return (
+                  <button
+                    key={col}
+                    type="button"
+                    onClick={() => onStyleChange({ ...style, color: col })}
+                    className={`w-5 h-5 rounded-full transition-transform ${
+                      isSelected ? 'ring-2 ring-primary scale-110' : 'ring-1 ring-white/20 hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={col}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Edge */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 text-[11px]">Edge</span>
+            <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
+              {EDGES.map((ed) => (
+                <button
+                  key={ed}
+                  type="button"
+                  onClick={() => onStyleChange({ ...style, edge: ed })}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    style.edge === ed ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {ed === 'NONE' ? 'None' : ed === 'SHADOW' ? 'Shadow' : ed === 'OUTLINE' ? 'Outline' : 'Raised'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Background */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 text-[11px]">Background</span>
+            <div className="flex rounded-lg bg-surface-800 p-0.5 gap-0.5">
+              {BACKGROUNDS.map((bg) => (
+                <button
+                  key={bg}
+                  type="button"
+                  onClick={() => onStyleChange({ ...style, background: bg })}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
+                    Math.abs(style.background - bg) < 0.05 ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {bg === 0 ? 'Off' : `${Math.round(bg * 100)}%`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Position */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 text-[11px]">Position</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={style.position <= -2}
+                onClick={() => onStyleChange({ ...style, position: Math.max(-2, style.position - 1) })}
+                className="w-6 h-6 rounded bg-surface-800 hover:bg-surface-700 disabled:opacity-30 text-xs font-bold text-gray-200 flex items-center justify-center transition-colors"
+              >
+                −
+              </button>
+              <span className="w-8 text-center font-mono text-[11px] text-primary-hover">
+                {style.position > 0 ? `+${style.position}` : `${style.position}`}
+              </span>
+              <button
+                type="button"
+                disabled={style.position >= 4}
+                onClick={() => onStyleChange({ ...style, position: Math.min(4, style.position + 1) })}
+                className="w-6 h-6 rounded bg-surface-800 hover:bg-surface-700 disabled:opacity-30 text-xs font-bold text-gray-200 flex items-center justify-center transition-colors"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Sub-menu 1: Track list + sync offset */
+        <>
+          {activeUrl && (
+            <div className="px-3 py-2 border-b border-surface-800 bg-surface-950/30 shrink-0">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-gray-300 mb-1.5">
+                <span className="text-gray-400">Sync Offset</span>
+                <span className="font-mono text-primary-hover font-bold">
+                  {offsetSec > 0 ? `+${offsetSec.toFixed(2)}s` : `${offsetSec.toFixed(2)}s`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-1.5">
+                {[-0.5, -0.25].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => onOffsetChange(val)}
+                    className="flex-1 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
+                  >
+                    {val}s
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => onOffsetChange(0)}
+                  disabled={offsetSec === 0}
+                  className="px-2.5 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-400 hover:text-white disabled:opacity-40 transition-colors"
+                >
+                  Reset
+                </button>
+                {[0.25, 0.5].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => onOffsetChange(val)}
+                    className="flex-1 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] font-bold text-gray-200 transition-colors"
+                  >
+                    +{val}s
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+            {error && <p className="px-3 py-2 text-xs text-red-400">{error}</p>}
+            <button
+              role="menuitemradio"
+              aria-checked={!activeUrl}
+              onClick={() => onSelect(null)}
+              className={`${itemBase} ${!activeUrl ? 'bg-primary/20 text-primary-hover font-semibold' : 'text-gray-300 hover:bg-surface-800'}`}
+            >
+              <span>Off</span>
+              {!activeUrl && <Check className="w-3.5 h-3.5 text-primary-hover" />}
+            </button>
+            {listLoading && groups.length === 0 && (
+              <p className="px-3 py-3 text-xs text-gray-400">Finding subtitles…</p>
+            )}
+            {!listLoading && groups.length === 0 && (
+              <p className="px-3 py-3 text-xs text-gray-400">No subtitles available for this title.</p>
+            )}
+            {groups.map((group) => (
+              <div key={group.language} className="mt-2.5 first:mt-1">
+                <div className="px-3 py-1 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  {group.label} <span className="font-medium normal-case">({group.tracks.length})</span>
+                </div>
+                {group.tracks.map((track, i) => {
+                  const selected = activeUrl === track.url;
+                  return (
+                    <button
+                      key={track.url}
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      onClick={() => onSelect(track)}
+                      title={track.release || track.label}
+                      className={`${itemBase} ${selected ? 'bg-primary/20 text-primary-hover font-semibold' : 'text-gray-300 hover:bg-surface-800'}`}
+                    >
+                      <span className="truncate">{track.label || track.release || `${group.label} ${i + 1}`}</span>
+                      {selected && <Check className="w-3.5 h-3.5 flex-shrink-0 text-primary-hover" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </MenuSurface>
+  );
+};
 
 interface SettingsMenuProps {
   onClose: () => void;
