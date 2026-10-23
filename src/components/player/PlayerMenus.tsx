@@ -56,12 +56,13 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
   style,
   onStyleChange,
 }) => (
-  <MenuSurface onClose={onClose} label="Subtitles" className={`${menuShell} w-80 max-w-[calc(100vw-2rem)] max-h-[70vh]`}>
-    <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-surface-800 flex items-center justify-between">
+  <MenuSurface onClose={onClose} label="Subtitles" className={`${menuShell} w-80 max-w-[calc(100vw-2rem)] max-h-[75vh] flex flex-col p-0 overflow-hidden`}>
+    <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-surface-800 flex items-center justify-between shrink-0">
       <span>Subtitles</span>
       {loading && <span className="normal-case font-medium text-primary-hover">Loading…</span>}
     </div>
 
+    <div className="overflow-y-auto max-h-[32vh] px-2 pt-1 border-b border-surface-800 shrink-0">
     {/* Subtitle Sync Offset Adjuster */}
     {activeUrl && (
       <div className="px-3 py-2 border-b border-surface-800/80 bg-surface-950/40 rounded-xl my-1.5">
@@ -259,6 +260,9 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
       </div>
     </div>
 
+    </div>
+
+    <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
     {error && <p className="px-3 py-2 text-xs text-red-400">{error}</p>}
     <button
       role="menuitemradio"
@@ -291,13 +295,14 @@ export const SubtitleMenu: React.FC<SubtitleMenuProps> = ({
               title={track.release || track.label}
               className={`${itemBase} ${selected ? 'bg-primary/20 text-primary-hover' : 'text-gray-300 hover:bg-surface-800'}`}
             >
-              <span className="truncate">{track.release || track.label || `${group.label} ${i + 1}`}</span>
+              <span className="truncate">{track.label || track.release || `${group.label} ${i + 1}`}</span>
               {selected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
             </button>
           );
         })}
       </div>
     ))}
+    </div>
   </MenuSurface>
 );
 
